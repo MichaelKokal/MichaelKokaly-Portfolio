@@ -131,8 +131,6 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .nav-link:hover { background: rgba(255, 255, 255, 0.6); }
-.nav-cta { background: var(--ink); color: var(--white); }
-.nav-cta:hover { background: #3a332d; }
 :is(.nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .headline {
@@ -482,8 +480,9 @@ button { font: inherit; color: inherit; }
 @media (max-width: 720px) {
   :root { --inset: 6px; --radius: 16px; }
   .header { padding: 16px; }
-  .wordmark { font-size: 22px; }
-  .nav .nav-link:not(.nav-cta) { display: none; }
+  .wordmark { font-size: 20px; }
+  .nav { gap: 0; }
+  .nav-link { padding: 7px 7px; font-size: 12.5px; }
   .loader-brand { font-size: 40px; left: 20px; top: 24px; }
   .loader-progress { right: 18px; bottom: 18px; }
   .loader-skip { left: 18px; bottom: 24px; }

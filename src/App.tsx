@@ -21,14 +21,14 @@ export function App() {
           {BRAND}
         </a>
         <nav className="nav">
-          <button className="nav-link" onClick={entrance.replay}>
-            Replay intro
-          </button>
           <a className="nav-link" href="https://github.com/MichaelKokal" target="_blank" rel="noreferrer">
             GitHub ↗
           </a>
-          <a className="nav-link nav-cta" href="/Michael-Kokaly-Resume.pdf" target="_blank" rel="noreferrer">
-            Resume
+          <a className="nav-link" href="https://www.linkedin.com/in/michael-kokaly" target="_blank" rel="noreferrer">
+            LinkedIn ↗
+          </a>
+          <a className="nav-link" href="/Michael-Kokaly-Resume.pdf" target="_blank" rel="noreferrer">
+            Resume ↗
           </a>
         </nav>
       </header>
