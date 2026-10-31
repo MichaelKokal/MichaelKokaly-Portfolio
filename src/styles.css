@@ -71,8 +71,6 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 .clouds svg { width: 100%; height: 100%; display: block; }
-.page.is-ring .clouds { height: 26%; }
-.page.is-ring .headline h1 { font-size: clamp(38px, 4.6vw, 66px); }
 
 .hero {
   position: absolute;
@@ -120,15 +118,7 @@ button { font: inherit; color: inherit; }
 }
 .page.is-home .nav { opacity: 1; transform: none; }
 .page:not(.is-home) .nav { pointer-events: none; }
-
-.switch {
-  display: flex;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(10px);
-}
-.switch button, .nav-link {
+.nav-link {
   border: 0;
   background: none;
   padding: 7px 14px;
@@ -140,11 +130,10 @@ button { font: inherit; color: inherit; }
   text-decoration: none;
   white-space: nowrap;
 }
-.switch button[aria-pressed="true"] { background: var(--ink); color: var(--white); }
-.nav-link:hover, .switch button[aria-pressed="false"]:hover { background: rgba(255, 255, 255, 0.6); }
+.nav-link:hover { background: rgba(255, 255, 255, 0.6); }
 .nav-cta { background: var(--ink); color: var(--white); }
 .nav-cta:hover { background: #3a332d; }
-:is(.switch button, .nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+:is(.nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .headline {
   position: absolute;
@@ -293,8 +282,19 @@ button { font: inherit; color: inherit; }
   border-radius: calc(18px * var(--u));
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  opacity: var(--appear, 1);
-  box-shadow: 0 calc(18px * var(--u)) calc(40px * var(--u)) rgba(31, 20, 40, 0.28);
+  box-shadow: 0 calc(18px * var(--u)) calc(40px * var(--u)) rgba(31, 20, 40, calc(0.28 * var(--appear, 1)));
+}
+/* Cards fade in from the white loader, but stay solid the whole time. If they
+   went see-through, overlapping cards showed through each other and flickered. */
+.pcard-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background: var(--white);
+  opacity: calc(1 - var(--appear, 1));
+  pointer-events: none;
 }
 .pcard-front { background: #111; }
 .pcard-back {
@@ -471,30 +471,11 @@ button { font: inherit; color: inherit; }
 .pin-ring { fill: #fb923c; transform-box: fill-box; transform-origin: center; animation: ping 2.4s ease-out infinite; }
 @keyframes ping { from { transform: scale(1); opacity: 0.6; } to { transform: scale(3.4); opacity: 0; } }
 
-/* ---------- Ring ---------- */
+/* ---------- Scene ---------- */
 
-.ring-stage {
-  position: absolute;
-  /* Sit the ring a little high so the headline has room below it. */
-  inset: -9% 0 9%;
-  perspective: var(--persp, 1000px);
-  transform: translateY(var(--anchor, 0px)) rotate(var(--roll, -20deg));
-}
-.ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform-style: preserve-3d;
-  transform: rotateX(var(--tilt, -22deg));
-}
-.ring-hero .pcard { width: 270px; height: 480px; margin: -240px 0 0 -135px; }
-
-/* ---------- Wheel ---------- */
-
-.wheel-scene { position: absolute; inset: 0; perspective: 1800px; }
-.wheel-stage { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
-.wheel-hero .pcard { --u: 0.652; width: 176px; height: 312px; margin: -156px 0 0 -88px; }
-.wheel-hero .pcard-face { opacity: 1; }
+.scene { position: absolute; inset: 0; perspective: var(--persp, 1000px); }
+.stage { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
+.hero .pcard { --u: 0.6667; width: 180px; height: 320px; margin: -160px 0 0 -90px; }
 
 /* ---------- Small screens ---------- */
 

@@ -5,6 +5,8 @@ export const CARD_W = 270;
 export const CARD_H = 480;
 /** Share of the formation each card spends moving. The rest is stagger. */
 export const DEAL = 0.3;
+/** How deep the waiting stack is, front card to back. */
+export const STACK_DEPTH = 80;
 
 /** A card's angle on the ring. 0 is the far centre, ±180 is nearest the camera. */
 export function reelAngle(slot: number, angle: number, slots = REEL_SLOTS) {
@@ -75,8 +77,10 @@ export function reelPose(angle: number, formation: number, scene: Scene): Pose {
   const dealt = 1 - (1 - t) ** 3;
   const placed = -180 + around * dealt;
   const r = rad(placed);
-  // Waiting cards sit a hair inside each other so the stack reads as one card.
-  const radius = scene.radius - (1 - dealt) * order * 24;
+  // Waiting cards sit just inside each other so the stack reads as one card.
+  // About 5px apart: any closer and the browser cannot tell which overlapping
+  // card is in front, so their monograms flicker through each other.
+  const radius = scene.radius - (1 - dealt) * order * STACK_DEPTH;
   const x = -Math.sin(r) * radius;
   const z = -Math.cos(r) * radius;
   // Depth toward the camera after the ring's tilt, plus the card's own half width

@@ -1,26 +1,43 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { MotionValue } from "motion/react";
 import { ProjectCard } from "../cards/ProjectCard";
 import type { PreviewCtl } from "../cards/preview";
+import type { Project } from "../cards/projects";
 import { attachGestures, createWriter, hitSlot } from "../cards/runtime";
 import { nearestAngle, recycledIndex } from "../math";
-import type { HeroProps } from "../ring/RingHero";
-import { DRIFT, WHEEL_CARDS, dealPose, wheelScene, wheelTransform } from "./deal-wheel";
+import { DRIFT, VISIBLE_DEG, WHEEL_CARDS, wheelScene } from "../wheel/deal-wheel";
+import { mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, wheelRestPose } from "./morph";
+
+type Props = {
+  projects: Project[];
+  /** Deals the cards around the ring. */
+  formation: MotionValue<number>;
+  /** Carries every card from the ring to its place on the wheel. */
+  expansion: MotionValue<number>;
+  interactive: boolean;
+  reduced: boolean;
+};
 
 const STEP = 360 / WHEEL_CARDS;
 const PLAY_WITHIN = 40;
-const cards = Array.from({ length: WHEEL_CARDS }, (_, i) => i);
 const DEG = 180 / Math.PI;
+const cards = Array.from({ length: WHEEL_CARDS }, (_, i) => i);
+const ringSlots = cards.map((i) => ringSlotOf(i));
 
-/** How big the scene can be in this frame, so the lifted wheel clears its top edge. */
+/** How big the scene can be in this frame, so the wheel clears its top edge. */
 function fit(w: number, h: number) {
-  // The lifted top card reaches about 352px above the stage centre.
+  // The resting top card reaches about 352px above the stage centre.
   const tall = (h / 2 - 80) / (352 * 1.14 - 50);
   return Math.max(0.45, Math.min(1, tall, w / 820));
 }
 
-export function WheelHero({ projects, formation, expansion, interactive, reduced }: HeroProps) {
+/**
+ * The intro is the ring: cards are dealt round a small tilted ring while the
+ * page loads. The reveal then carries each card to its place on the wheel,
+ * which keeps turning slowly and answers to drag, swipe and scroll.
+ */
+export function PortfolioHero({ projects, formation, expansion, interactive, reduced }: Props) {
   const root = useRef<HTMLDivElement>(null);
-  const stage = useRef<HTMLDivElement>(null);
   const n = projects.length;
   const [reels, setReels] = useState(() => cards.map((i) => recycledIndex(i, WHEEL_CARDS, i * STEP, n)));
   const reelsRef = useRef(reels);
@@ -38,14 +55,13 @@ export function WheelHero({ projects, formation, expansion, interactive, reduced
     playing.current[slot] = false;
   }, []);
 
+  // Tabbing to a card turns the wheel to bring it to the top.
   const onFocusSlot = useCallback((slot: number) => {
-    const { kick } = wheelScene(expansion.get());
-    target.current = nearestAngle(spin.current, slot * STEP + kick);
-  }, [expansion]);
+    target.current = nearestAngle(spin.current, slot * STEP + wheelScene(1).kick);
+  }, []);
 
   useEffect(() => {
     const el = root.current!;
-    const stageEl = stage.current!;
     const write = createWriter();
     let size = { w: el.clientWidth, h: el.clientHeight };
     const ro = new ResizeObserver(([e]) => (size = { w: e.contentRect.width, h: e.contentRect.height }));
@@ -71,43 +87,59 @@ export function WheelHero({ projects, formation, expansion, interactive, reduced
     const tick = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
+      // Read layout before this frame's writes, and only every third frame.
       if (++frame % 3 === 0) hovered = live.current ? hitSlot(pointer) : -1;
 
-      const deal = formation.get();
-      const lift = expansion.get();
-      const scale = fit(size.w, size.h) * (1 + 0.14 * lift);
-      pxToDeg = DEG / (wheelScene(lift).radius * scale);
+      const form = formation.get();
+      const m = expansion.get();
+      const scale = fit(size.w, size.h);
+      pxToDeg = DEG / (wheelScene(1).radius * scale * 1.14);
 
-      // The wheel drifts left on its own, ramping in with the lift.
-      if (!reduced && !pointer.dragging && hovered < 0) target.current += DRIFT * lift * dt;
+      // The wheel drifts left on its own, ramping in as the cards arrive.
+      if (!reduced && !pointer.dragging && hovered < 0) target.current += DRIFT * m * dt;
       target.current += velocity * dt;
       velocity *= Math.exp(-dt * 3.2);
       // Exponential follow: the same feel at any frame rate.
       spin.current += (target.current - spin.current) * (1 - Math.exp(-dt * 9));
 
-      write.style(
-        stageEl,
-        "transform",
-        `translateY(${Math.round((60 - 10 * lift) * 100) / 100}px) rotateX(${Math.round(12 * lift * 100) / 100}deg) scale(${Math.round(scale * 1000) / 1000})`,
-      );
+      write.style(el, "--persp", `${Math.round(scenePerspective(m))}px`);
 
       let swapped: number[] | null = null;
       for (const i of cards) {
         const card = els.current[i];
         if (!card) continue;
-        const pose = dealPose(i, deal, lift, spin.current);
-        // Hide, don't fade: the compositor skips hidden cards entirely.
-        write.style(card, "visibility", pose.visible ? "visible" : "hidden");
-        if (pose.visible) {
-          write.style(card, "transform", wheelTransform(pose));
-        } else if (pose.away >= 105) {
-          const s = wheelScene(lift);
-          const want = recycledIndex(i, WHEEL_CARDS, i * STEP - spin.current + s.kick, n);
+        const wheel = wheelRestPose(i, spin.current, scale);
+        const k = ringSlots[i];
+
+        let visible: boolean, appear = 1, pose = wheel.pose;
+        if (m >= 1) {
+          visible = wheel.visible;
+        } else if (k === null) {
+          // Cards that sit the ring out join only once the wheel is nearly settled.
+          visible = wheel.visible && m > 0.95;
+        } else {
+          const ring = ringIntroPose(k, form, scale);
+          visible = ring.appear > 0;
+          // Only the very first card fades in, from the white page. Every card after
+          // it is dealt solid: cards fading on their own schedules overlapped as
+          // light and dark stripes that flickered as they moved.
+          appear = Math.min(1, form / 0.05);
+          pose = mixPose(ring.pose, wheel.pose, m);
+        }
+
+        // Hide, don't fade: hidden cards cost the compositor nothing.
+        write.style(card, "visibility", visible ? "visible" : "hidden");
+        if (visible) {
+          write.style(card, "transform", poseTransform(pose));
+          write.style(card, "--appear", String(Math.round(appear * 100) / 100));
+        } else if (wheel.away >= VISIBLE_DEG && (m >= 1 || k === null)) {
+          // Out of sight at the bottom of the wheel: safe to swap its project.
+          const want = recycledIndex(i, WHEEL_CARDS, i * STEP - spin.current + wheelScene(1).kick, n);
           if (want !== reelsRef.current[i]) (swapped ??= [...reelsRef.current])[i] = want;
         }
         write.attr(card, "data-hover", i === hovered ? "" : null);
 
-        const play = !reduced && pose.visible && lift > 0.6 && pose.away < PLAY_WITHIN;
+        const play = !reduced && visible && m > 0.6 && wheel.away < PLAY_WITHIN;
         const ctl = ctls.current[i];
         if (ctl && play !== playing.current[i]) {
           playing.current[i] = play;
@@ -130,9 +162,9 @@ export function WheelHero({ projects, formation, expansion, interactive, reduced
   }, [formation, expansion, reduced, n]);
 
   return (
-    <div className="hero wheel-hero" ref={root}>
-      <div className="wheel-scene">
-        <div className="wheel-stage" ref={stage}>
+    <div className="hero" ref={root}>
+      <div className="scene">
+        <div className="stage">
           {cards.map((i) => (
             <ProjectCard
               key={i}

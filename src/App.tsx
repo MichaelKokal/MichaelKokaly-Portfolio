@@ -1,57 +1,26 @@
 import { motion, useTransform, type MotionValue } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { buildProjects, projectAssets } from "./cards/projects";
 import { Loader } from "./loader/Loader";
 import { useEntrance } from "./loader/useEntrance";
-import { RingHero } from "./ring/RingHero";
-import { WheelHero } from "./wheel/WheelHero";
+import { PortfolioHero } from "./hero/PortfolioHero";
 
-type Hero = "ring" | "wheel";
 const BRAND = "Michael Kokaly";
-
-function initialHero(): Hero {
-  const q = new URLSearchParams(location.search).get("hero");
-  if (q === "ring" || q === "wheel") return q;
-  try {
-    const saved = localStorage.getItem("hero");
-    if (saved === "ring" || saved === "wheel") return saved;
-  } catch {}
-  return "wheel";
-}
 
 export function App() {
   const projects = useMemo(buildProjects, []);
   const assets = useMemo(() => projectAssets(projects), [projects]);
   const entrance = useEntrance(assets);
   const { stage, home, expansion } = entrance;
-  const [hero, setHero] = useState<Hero>(initialHero);
   const wordmark = useRef<HTMLAnchorElement>(null);
 
-  const choose = (h: Hero) => {
-    setHero(h);
-    try {
-      localStorage.setItem("hero", h);
-    } catch {}
-    const url = new URL(location.href);
-    url.searchParams.set("hero", h);
-    history.replaceState(null, "", url);
-  };
-
-  const Hero = hero === "ring" ? RingHero : WheelHero;
   return (
-    <div className={`page is-${hero} ${home ? "is-home" : ""} ${stage === "done" ? "" : "is-entering"}`}>
+    <div className={`page ${home ? "is-home" : ""} ${stage === "done" ? "" : "is-entering"}`}>
       <header className="header" aria-hidden={!home}>
         <a ref={wordmark} className="wordmark" href="https://github.com/MichaelKokal" style={{ opacity: home ? 1 : 0 }}>
           {BRAND}
         </a>
         <nav className="nav">
-          <div className="switch" role="group" aria-label="Layout">
-            {(["wheel", "ring"] as const).map((h) => (
-              <button key={h} aria-pressed={hero === h} onClick={() => choose(h)}>
-                {h === "wheel" ? "Wheel" : "Ring"}
-              </button>
-            ))}
-          </div>
           <button className="nav-link" onClick={entrance.replay}>
             Replay intro
           </button>
@@ -66,15 +35,14 @@ export function App() {
 
       <main className="frame">
         <Sky expansion={expansion} />
-        <Hero
-          key={hero}
+        <PortfolioHero
           projects={projects}
           formation={entrance.formation}
           expansion={expansion}
           interactive={stage === "done"}
           reduced={entrance.reduced}
         />
-        <Clouds expansion={expansion} solid={hero === "wheel"} />
+        <Clouds expansion={expansion} />
         <section className="headline" aria-hidden={!home}>
           <h1>
             Things I've <em>built.</em>
@@ -106,12 +74,13 @@ const PUFFS = (() => {
   return { back: back.join(""), front: front.join("") };
 })();
 
-function Clouds({ expansion, solid }: { expansion: MotionValue<number>; solid: boolean }) {
+function Clouds({ expansion }: { expansion: MotionValue<number> }) {
   // The bank rises as the scene opens; the wheel comes up out of it.
   const y = useTransform(expansion, [0, 1], ["70%", "0%"], { ease: (t) => 1 - (1 - t) ** 3 });
-  const opacity = useTransform(expansion, [0, 0.2], [0, solid ? 1 : 0.92]);
+  // Fully opaque: the wheel rises out of the clouds, never shows through them.
+  const opacity = useTransform(expansion, [0, 0.2], [0, 1]);
   return (
-    <motion.div className={`clouds ${solid ? "is-solid" : ""}`} style={{ y, opacity }} aria-hidden="true">
+    <motion.div className="clouds" style={{ y, opacity }} aria-hidden="true">
       <svg viewBox="0 0 1600 520" preserveAspectRatio="xMidYMin slice">
         <defs>
           <linearGradient id="cloud-back" x1="0" y1="0" x2="0" y2="1">

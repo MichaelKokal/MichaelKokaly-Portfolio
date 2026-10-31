@@ -2,8 +2,8 @@ import { outCubic, span, wrap180 } from "../math";
 
 export const WHEEL_CARDS = 34;
 /** Cards are laid out at their resting size, so text is crisp once the wheel settles. */
-export const WHEEL_CARD_W = 176;
-export const WHEEL_CARD_H = 312;
+export const WHEEL_CARD_W = 180;
+export const WHEEL_CARD_H = 320;
 /** Cards further than this from the top are never on screen. */
 export const VISIBLE_DEG = 105;
 /** The wheel's own drift, degrees per second, to the left. */
