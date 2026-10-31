@@ -67,7 +67,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
     const ro = new ResizeObserver(([e]) => (size = { w: e.contentRect.width, h: e.contentRect.height }));
     ro.observe(el);
 
-    let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now();
+    let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0;
     let pxToDeg = DEG / 1010;
 
     const { pointer, detach } = attachGestures(
@@ -139,12 +139,16 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
         }
         write.attr(card, "data-hover", i === hovered ? "" : null);
 
-        const play = !reduced && visible && m > 0.6 && wheel.away < PLAY_WITHIN;
+        // Previews wait until the wheel has settled, then start one at a time.
+        // Starting seven at once in the middle of the move made it stutter.
+        const play = !reduced && visible && m >= 1 && wheel.away < PLAY_WITHIN;
         const ctl = ctls.current[i];
-        if (ctl && play !== playing.current[i]) {
+        if (ctl && play !== playing.current[i] && !(play && now - lastStart < 150)) {
           playing.current[i] = play;
-          if (play) ctl.play();
-          else ctl.pause();
+          if (play) {
+            ctl.play();
+            lastStart = now;
+          } else ctl.pause();
         }
       }
       if (swapped) {

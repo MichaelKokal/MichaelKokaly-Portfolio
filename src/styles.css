@@ -29,15 +29,18 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Frame ---------- */
 
+/* The frame draws in by clipping its edges, not by resizing. Resizing re-laid
+   out the whole 3D scene on every frame of the reveal and made it stutter. The
+   clip is the same on every side, so the scene's centre never moves. */
 .frame {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  border-radius: 0;
   isolation: isolate;
-  transition: inset 1.2s var(--ease), border-radius 1.2s var(--ease);
+  clip-path: inset(0 round 0);
+  transition: clip-path 1.2s var(--ease);
 }
-.page.is-home .frame { inset: var(--inset); border-radius: var(--radius); }
+.page.is-home .frame { clip-path: inset(var(--inset) round var(--radius)); }
 /* While the entrance plays the cards rise over the white loader, not under it. */
 .page.is-entering .frame { z-index: 101; }
 
@@ -45,6 +48,7 @@ button { font: inherit; color: inherit; }
   position: absolute;
   inset: 0;
   z-index: 0;
+  will-change: opacity;
   background:
     radial-gradient(80% 55% at 72% 100%, rgba(255, 205, 160, 0.9), rgba(255, 205, 160, 0) 70%),
     radial-gradient(60% 40% at 18% 18%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
@@ -56,9 +60,7 @@ button { font: inherit; color: inherit; }
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.18;
-  mix-blend-mode: soft-light;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: var(--grain);
 }
 
 .clouds {
@@ -69,6 +71,8 @@ button { font: inherit; color: inherit; }
   height: 40%;
   z-index: 2;
   pointer-events: none;
+  /* Its own layer, so rising and fading never repaints the clouds. */
+  will-change: transform, opacity;
 }
 .clouds svg { width: 100%; height: 100%; display: block; }
 
@@ -135,8 +139,9 @@ button { font: inherit; color: inherit; }
 
 .headline {
   position: absolute;
-  left: clamp(20px, 4vw, 56px);
-  bottom: clamp(22px, 5vh, 52px);
+  left: calc(var(--inset) + clamp(20px, 4vw, 56px));
+  right: calc(var(--inset) + clamp(20px, 4vw, 56px));
+  bottom: calc(var(--inset) + clamp(22px, 5vh, 52px));
   z-index: 3;
   max-width: 560px;
   pointer-events: none;
@@ -261,6 +266,9 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Cards ---------- */
 
+/* While the intro plays, keep each card's drawing as it moves instead of
+   redrawing it at every new size. It is drawn crisp again once the wheel settles. */
+.page.is-entering .pcard { will-change: transform; }
 .pcard {
   --u: 1;
   position: absolute;

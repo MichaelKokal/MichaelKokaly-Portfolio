@@ -1,4 +1,4 @@
-import { coverUrl } from "./covers";
+import { coverUrl, rasterizeCover } from "./covers";
 
 /**
  * A terminal replay. A line containing "§" prints everything before it at once
@@ -231,6 +231,11 @@ export function buildProjects(): Project[] {
       preview: { kind: "terminal", script: houseOrArt() },
     },
   ];
+}
+
+/** The same projects with every drawn cover turned into a plain image. */
+export async function withPlainCovers(projects: Project[]): Promise<Project[]> {
+  return Promise.all(projects.map(async (p) => ({ ...p, cover: await rasterizeCover(p.cover) })));
 }
 
 /** Every image a card can show, for the loader to fetch and decode. */

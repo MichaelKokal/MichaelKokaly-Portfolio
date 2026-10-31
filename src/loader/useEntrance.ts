@@ -38,7 +38,8 @@ function load(src: string): Promise<void> {
  * The entrance: formation deals the cards while real assets load, expansion
  * opens the scene once both are done. Both heroes read these two numbers.
  */
-export function useEntrance(assets: { covers: string[]; previews: string[] }) {
+/** `assets` is null until the covers are ready to load; the loader waits at 0 until then. */
+export function useEntrance(assets: { covers: string[]; previews: string[] } | null) {
   const formation = useMotionValue(0);
   const expansion = useMotionValue(0);
   const [reduced] = useState(prefersReducedMotion);
@@ -68,6 +69,11 @@ export function useEntrance(assets: { covers: string[]; previews: string[] }) {
     const id = ++run.current;
     const live = () => id === run.current;
     stop();
+    if (reduced) {
+      finish();
+      return;
+    }
+    if (!assets) return;
 
     const all = [...assets.covers, ...assets.previews];
     const total = all.length + 1; // + fonts
@@ -77,10 +83,6 @@ export function useEntrance(assets: { covers: string[]; previews: string[] }) {
     const covers = Promise.all([fonts, ...assets.covers.map((s) => load(s).then(tick))]);
     const ready = Promise.all([covers, ...assets.previews.map((s) => load(s).then(tick))]);
 
-    if (reduced) {
-      finish();
-      return;
-    }
     formation.set(0);
     expansion.set(0);
     setProgress(0);

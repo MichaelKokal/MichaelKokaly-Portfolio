@@ -214,3 +214,26 @@ export const COVERS = {
 export function coverUrl(name: keyof typeof COVERS) {
   return toUrl(COVERS[name]());
 }
+
+/**
+ * Turn a drawn (vector) cover into a plain image. A vector image is redrawn from
+ * scratch every time its card changes size, and during the reveal every card
+ * changes size on every frame, which made the move from ring to wheel stutter.
+ * A plain image is drawn once and then only scaled.
+ */
+export async function rasterizeCover(url: string): Promise<string> {
+  if (!url.startsWith("blob:")) return url;
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    canvas.getContext("2d")!.drawImage(img, 0, 0, W, H);
+    const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, "image/jpeg", 0.92));
+    return blob ? URL.createObjectURL(blob) : url;
+  } catch {
+    return url;
+  }
+}
