@@ -4,8 +4,8 @@ import type { PreviewSpec, Script } from "./projects";
 /**
  * A card's moving preview. It sits over the cover at opacity 0 and only sets
  * data-playing once a real frame is on screen, so the crossfade never shows a
- * blank frame. The animation loop calls play() and pause(); both are cheap to
- * call repeatedly.
+ * blank frame. Pausing fades it back out to the cover. The animation loop calls
+ * play() and pause(); both are cheap to call repeatedly.
  */
 export type PreviewCtl = { play(): void; pause(): void; destroy(): void };
 
@@ -14,21 +14,22 @@ export function mountPreview(host: HTMLElement, spec: PreviewSpec): PreviewCtl {
   host.removeAttribute("data-run");
   host.replaceChildren();
   const shown = () => host.setAttribute("data-playing", "");
+  const hidden = () => host.removeAttribute("data-playing");
   switch (spec.kind) {
     case "video":
-      return video(host, spec.src, shown);
+      return video(host, spec.src, shown, hidden);
     case "terminal":
-      return terminal(host, spec.script, shown);
+      return terminal(host, spec.script, shown, hidden);
     case "pan":
-      return css(host, spec.images.map((src, i) => img(src, `pan pan-${i}`)), shown);
+      return css(host, spec.images.map((src, i) => img(src, `pan pan-${i}`)), shown, hidden);
     case "drift":
-      return css(host, [img(spec.image, "drift")], shown);
+      return css(host, [img(spec.image, "drift")], shown, hidden);
     case "globe":
-      return css(host, [globe()], shown);
+      return css(host, [globe()], shown, hidden);
   }
 }
 
-function video(host: HTMLElement, src: string, shown: () => void): PreviewCtl {
+function video(host: HTMLElement, src: string, shown: () => void, hidden: () => void): PreviewCtl {
   const v = document.createElement("video");
   Object.assign(v, { muted: true, loop: true, playsInline: true, preload: "none", src });
   v.setAttribute("muted", "");
@@ -45,6 +46,7 @@ function video(host: HTMLElement, src: string, shown: () => void): PreviewCtl {
       if (!on) return;
       on = false;
       v.pause();
+      hidden();
     },
     destroy() {
       v.pause();
@@ -55,7 +57,7 @@ function video(host: HTMLElement, src: string, shown: () => void): PreviewCtl {
 }
 
 /** CSS-animated previews: running is just animation-play-state. */
-function css(host: HTMLElement, nodes: Element[], shown: () => void): PreviewCtl {
+function css(host: HTMLElement, nodes: Element[], shown: () => void, hidden: () => void): PreviewCtl {
   host.append(...nodes);
   const images = nodes.flatMap((n) => (n instanceof HTMLImageElement ? [n] : [...n.querySelectorAll("img")]));
   let on = false, started = false, dead = false;
@@ -64,16 +66,17 @@ function css(host: HTMLElement, nodes: Element[], shown: () => void): PreviewCtl
       if (on) return;
       on = true;
       host.setAttribute("data-run", "");
-      if (started) return;
+      if (started) return void requestAnimationFrame(shown);
       started = true;
       Promise.all(images.map((i) => i.decode().catch(() => {}))).then(() => {
-        if (!dead) requestAnimationFrame(shown);
+        if (!dead && on) requestAnimationFrame(shown);
       });
     },
     pause() {
       if (!on) return;
       on = false;
       host.removeAttribute("data-run");
+      hidden();
     },
     destroy() {
       dead = true;
@@ -110,14 +113,14 @@ const esc = (s: string) => s.replace(/[&<>]/g, (c) => ESC[c]);
 const MAX_LINES = 15;
 
 /** Replays a terminal session: prompts appear, answers get typed. */
-function terminal(host: HTMLElement, script: Script, shown: () => void): PreviewCtl {
+function terminal(host: HTMLElement, script: Script, shown: () => void, hidden: () => void): PreviewCtl {
   const pre = document.createElement("pre");
   pre.className = "term";
   host.append(pre);
 
   let lines: string[] = []; // rendered html
   let index = 0, typed = 0, wait = 0, typing = false;
-  let timer = 0, started = false;
+  let timer = 0;
 
   const step = () => {
     if (wait > 0) return void wait--;
@@ -167,16 +170,14 @@ function terminal(host: HTMLElement, script: Script, shown: () => void): Preview
         render();
       }, 55);
       host.setAttribute("data-run", "");
-      if (!started) {
-        started = true;
-        requestAnimationFrame(shown);
-      }
+      requestAnimationFrame(shown);
     },
     pause() {
       if (!timer) return;
       clearInterval(timer);
       timer = 0;
       host.removeAttribute("data-run");
+      hidden();
     },
     destroy() {
       clearInterval(timer);

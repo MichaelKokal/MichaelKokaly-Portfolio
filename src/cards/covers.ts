@@ -9,7 +9,7 @@ const wrap = (defs: string, body: string) =>
 
 const toUrl = (svg: string) => URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
 
-// Seeded so the stars and clouds are the same on every load.
+// Seeded so the stars are the same on every load.
 function rng(seed: number) {
   return () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 }
@@ -218,7 +218,7 @@ export function coverUrl(name: keyof typeof COVERS) {
 /**
  * Turn a drawn (vector) cover into a plain image. A vector image is redrawn from
  * scratch every time its card changes size, and during the reveal every card
- * changes size on every frame, which made the move from ring to wheel stutter.
+ * changes size on every frame, which made the move from ring to row stutter.
  * A plain image is drawn once and then only scaled.
  */
 export async function rasterizeCover(url: string): Promise<string> {

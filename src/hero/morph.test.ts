@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rad } from "../math";
-import { CARD_H, CARD_W, reelPose, reelScene } from "../ring/reel-ring";
-import { WHEEL_CARDS, WHEEL_CARD_H, WHEEL_CARD_W, dealPose } from "../wheel/deal-wheel";
-import { mixPose, ringIntroPose, ringSlotOf, wheelRestPose, type CardPose } from "./morph";
+import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose, reelScene } from "../ring/reel-ring";
+import { CARD_COUNT, CARD_H, CARD_W, mixPose, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
 
 // A tiny CSS transform model: 4x4 matrices, y pointing down, applied right to left.
 type M = number[][];
@@ -31,49 +30,64 @@ describe("ringIntroPose", () => {
         const a = k * 22.5;
         const p = reelPose(a, formation, scene);
         const ring = chain(RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
-        expectSameCorners(ring, CARD_W, CARD_H, unified(ringIntroPose(k, formation, 1).pose), WHEEL_CARD_W, WHEEL_CARD_H);
-      }
-    }
-  });
-});
-
-describe("wheelRestPose", () => {
-  it("puts each card exactly where the wheel hero drew it", () => {
-    for (const i of [0, 3, 30]) {
-      for (const spin of [0, 41]) {
-        const d = dealPose(i, 1, 1, spin);
-        const stage = chain(T(0, 50, 0), RX(12), S(1.14));
-        const card = chain(T(0, d.pivot, d.depth), RZ(d.angle), T(0, d.reach, 0), RY(d.flip), S(d.scale));
-        expectSameCorners(mul(stage, card), WHEEL_CARD_W, WHEEL_CARD_H, unified(wheelRestPose(i, spin, 1).pose), WHEEL_CARD_W, WHEEL_CARD_H);
+        expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, formation, 1).pose), CARD_W, CARD_H);
       }
     }
   });
 });
 
 describe("ringSlotOf", () => {
-  it("gives the ring's 16 slots to the 16 cards nearest the top of the wheel", () => {
-    const slots = Array.from({ length: WHEEL_CARDS }, (_, i) => ringSlotOf(i)).filter((k) => k !== null);
+  it("gives the ring's 16 slots to the 16 cards nearest the middle of the row", () => {
+    const slots = Array.from({ length: CARD_COUNT }, (_, i) => ringSlotOf(i)).filter((k) => k !== null);
     expect(slots.sort((a, b) => a! - b!)).toEqual([-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7]);
     expect(ringSlotOf(0)).toBe(0);
     expect(ringSlotOf(17)).toBeNull();
   });
 
-  it("keeps ring neighbours as wheel neighbours, and every ring card lands in view", () => {
-    for (let i = 0; i < WHEEL_CARDS; i++) {
+  it("keeps ring neighbours as neighbours in the row", () => {
+    for (let i = 0; i < CARD_COUNT; i++) {
       const k = ringSlotOf(i);
       if (k === null) continue;
-      expect(wheelRestPose(i, 0, 1).visible).toBe(true);
-      const next = ringSlotOf((i + 1) % WHEEL_CARDS);
+      const next = ringSlotOf((i + 1) % CARD_COUNT);
       if (next !== null) expect(next).toBe(k - 1);
     }
   });
 });
 
 describe("mixPose", () => {
-  it("starts on the ring and ends on the wheel", () => {
-    const a = ringIntroPose(3, 1, 1).pose, b = wheelRestPose(31, 0, 1).pose;
+  it("starts on the ring and ends in the row", () => {
+    const a = ringIntroPose(3, 1, 1).pose, b = stripPose(31, 0, { w: 1440, h: 900, top: 92, bottom: 190 }).pose;
     expect(mixPose(a, b, 0)).toEqual(a);
     const end = mixPose(a, b, 1);
     for (const key of Object.keys(b) as (keyof CardPose)[]) expect(end[key]).toBeCloseTo(b[key]);
+  });
+});
+
+describe("stripPose", () => {
+  const l = { w: 1440, h: 900, top: 92, bottom: 150 };
+
+  it("fills the space between the header and the headline", () => {
+    const m = stripMetrics(l);
+    expect(m.cardH).toBe(900 - 92 - 150);
+    expect(m.y - m.cardH / 2).toBeCloseTo(92 - 450);
+    expect(m.y + m.cardH / 2).toBeCloseTo(900 - 150 - 450);
+  });
+
+  it("lays cards out flat, one card width apart, card 0 in the middle", () => {
+    const a = stripPose(0, 0, l), b = stripPose(1, 0, l), c = stripPose(33, 0, l);
+    expect(a.pose.x).toBeCloseTo(0);
+    expect(b.pose.x - a.pose.x).toBeCloseTo(a.pitch);
+    expect(a.pose.x - c.pose.x).toBeCloseTo(a.pitch);
+    for (const k of ["roll", "tilt", "spin", "yaw", "z"] as const) expect(a.pose[k]).toBe(0);
+  });
+
+  it("slides left to right as the spin goes down", () => {
+    const step = 360 / CARD_COUNT;
+    expect(stripPose(0, -step, l).pose.x).toBeCloseTo(stripPose(0, 0, l).pitch);
+  });
+
+  it("hides cards well off either side", () => {
+    expect(stripPose(17, 0, l).visible).toBe(false);
+    expect(stripPose(0, 0, l).inView).toBe(true);
   });
 });

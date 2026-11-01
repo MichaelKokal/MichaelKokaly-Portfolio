@@ -5,45 +5,53 @@ import type { PreviewCtl } from "../cards/preview";
 import type { Project } from "../cards/projects";
 import { attachGestures, createWriter, hitSlot } from "../cards/runtime";
 import { nearestAngle, recycledIndex } from "../math";
-import { DRIFT, VISIBLE_DEG, WHEEL_CARDS, wheelScene } from "../wheel/deal-wheel";
-import { mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, wheelRestPose } from "./morph";
+import { CARD_COUNT, mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, stripPose, type StripLayout } from "./morph";
 
 type Props = {
   projects: Project[];
   /** Deals the cards around the ring. */
   formation: MotionValue<number>;
-  /** Carries every card from the ring to its place on the wheel. */
+  /** Carries every card from the ring to its place in the row. */
   expansion: MotionValue<number>;
   interactive: boolean;
   reduced: boolean;
 };
 
-const STEP = 360 / WHEEL_CARDS;
-const PLAY_WITHIN = 40;
-const DEG = 180 / Math.PI;
-const cards = Array.from({ length: WHEEL_CARDS }, (_, i) => i);
+/** How fast the row slides to the right on its own, in px per second. */
+const SPEED = 38;
+
+const STEP = 360 / CARD_COUNT;
+const cards = Array.from({ length: CARD_COUNT }, (_, i) => i);
 const ringSlots = cards.map((i) => ringSlotOf(i));
 
-/** How big the scene can be in this frame, so the wheel clears its top edge. */
-function fit(w: number, h: number) {
-  // The resting top card reaches about 352px above the stage centre.
-  const tall = (h / 2 - 80) / (352 * 1.14 - 50);
-  return Math.max(0.45, Math.min(1, tall, w / 820));
+/** The space the row keeps clear for the header and the bar below it. */
+function rowLayout(w: number, h: number): StripLayout {
+  // Phones need more room below, because the bar stacks onto more lines.
+  const bottom = w < 720 ? 250 : Math.min(214, Math.max(180, h * 0.22));
+  return { w, h, top: 92, bottom };
+}
+
+/** How big the intro ring can be in this frame. */
+function ringFit(w: number, h: number) {
+  return Math.max(0.45, Math.min(1, (h / 2 - 80) / 351, w / 820));
 }
 
 /**
  * The intro is the ring: cards are dealt round a small tilted ring while the
- * page loads. The reveal then carries each card to its place on the wheel,
- * which keeps turning slowly and answers to drag, swipe and scroll.
+ * page loads. The reveal then carries each card to its place in a row of big,
+ * flat cards that slides slowly to the right and answers to drag, swipe and
+ * scroll.
  */
 export function PortfolioHero({ projects, formation, expansion, interactive, reduced }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const n = projects.length;
-  const [reels, setReels] = useState(() => cards.map((i) => recycledIndex(i, WHEEL_CARDS, i * STEP, n)));
+  const [reels, setReels] = useState(() => cards.map((i) => recycledIndex(i, CARD_COUNT, i * STEP, n)));
   const reelsRef = useRef(reels);
   const els = useRef<(HTMLAnchorElement | null)[]>([]);
   const ctls = useRef<(PreviewCtl | null)[]>([]);
   const playing = useRef<boolean[]>([]);
+  // The row's position, counted in the same degrees the intro ring uses: one
+  // card step is 360 / CARD_COUNT.
   const target = useRef(0);
   const spin = useRef(0);
   const live = useRef(interactive);
@@ -55,9 +63,9 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
     playing.current[slot] = false;
   }, []);
 
-  // Tabbing to a card turns the wheel to bring it to the top.
+  // Tabbing to a card slides it to the middle.
   const onFocusSlot = useCallback((slot: number) => {
-    target.current = nearestAngle(spin.current, slot * STEP + wheelScene(1).kick);
+    target.current = nearestAngle(spin.current, slot * STEP);
   }, []);
 
   useEffect(() => {
@@ -68,18 +76,18 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
     ro.observe(el);
 
     let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0;
-    let pxToDeg = DEG / 1010;
+    let pxToStep = STEP / 300;
 
     const { pointer, detach } = attachGestures(
       el,
       {
         drag: (dx) => {
           velocity = 0;
-          target.current -= dx * pxToDeg;
+          target.current -= dx * pxToStep;
         },
         // Keep the flick's speed and let it decay, so it glides.
-        release: (v) => (velocity = -v * pxToDeg),
-        wheel: (d) => (target.current += d * 0.04),
+        release: (v) => (velocity = -v * pxToStep),
+        wheel: (d) => (target.current += d * pxToStep),
       },
       () => live.current,
     );
@@ -92,15 +100,18 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
 
       const form = formation.get();
       const m = expansion.get();
-      const scale = fit(size.w, size.h);
-      pxToDeg = DEG / (wheelScene(1).radius * scale * 1.14);
+      const fit = ringFit(size.w, size.h);
+      const row = rowLayout(size.w, size.h);
+      // One card width of drag moves the row one card.
+      pxToStep = STEP / stripPose(0, 0, row).pitch;
 
-      // The wheel drifts left on its own, ramping in as the cards arrive.
-      if (!reduced && !pointer.dragging && hovered < 0) target.current += DRIFT * m * dt;
+      // The row slides slowly to the right on its own, easing in as the cards land.
+      // It holds still under the pointer, so a moving card is easy to click.
+      if (!reduced && !pointer.dragging && hovered < 0) target.current -= SPEED * pxToStep * m * dt;
       target.current += velocity * dt;
       velocity *= Math.exp(-dt * 3.2);
       // Exponential follow: the same feel at any frame rate.
-      spin.current += (target.current - spin.current) * (1 - Math.exp(-dt * 9));
+      spin.current += (target.current - spin.current) * (1 - Math.exp(-dt * 5));
 
       write.style(el, "--persp", `${Math.round(scenePerspective(m))}px`);
 
@@ -108,23 +119,24 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
       for (const i of cards) {
         const card = els.current[i];
         if (!card) continue;
-        const wheel = wheelRestPose(i, spin.current, scale);
+        // Where this card rests once the intro is over.
+        const rest = stripPose(i, spin.current, row);
         const k = ringSlots[i];
 
-        let visible: boolean, appear = 1, pose = wheel.pose;
+        let visible: boolean, appear = 1, pose = rest.pose;
         if (m >= 1) {
-          visible = wheel.visible;
+          visible = rest.visible;
         } else if (k === null) {
-          // Cards that sit the ring out join only once the wheel is nearly settled.
-          visible = wheel.visible && m > 0.95;
+          // Cards that sit the ring out join only once the rest are nearly settled.
+          visible = rest.visible && m > 0.95;
         } else {
-          const ring = ringIntroPose(k, form, scale);
+          const ring = ringIntroPose(k, form, fit);
           visible = ring.appear > 0;
           // Only the very first card fades in, from the white page. Every card after
           // it is dealt solid: cards fading on their own schedules overlapped as
           // light and dark stripes that flickered as they moved.
           appear = Math.min(1, form / 0.05);
-          pose = mixPose(ring.pose, wheel.pose, m);
+          pose = mixPose(ring.pose, rest.pose, m);
         }
 
         // Hide, don't fade: hidden cards cost the compositor nothing.
@@ -132,16 +144,16 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
         if (visible) {
           write.style(card, "transform", poseTransform(pose));
           write.style(card, "--appear", String(Math.round(appear * 100) / 100));
-        } else if (wheel.away >= VISIBLE_DEG && (m >= 1 || k === null)) {
-          // Out of sight at the bottom of the wheel: safe to swap its project.
-          const want = recycledIndex(i, WHEEL_CARDS, i * STEP - spin.current + wheelScene(1).kick, n);
+        } else if (!rest.visible && (m >= 1 || k === null)) {
+          // Off screen: safe to swap which project this card shows.
+          const want = recycledIndex(i, CARD_COUNT, i * STEP - spin.current, n);
           if (want !== reelsRef.current[i]) (swapped ??= [...reelsRef.current])[i] = want;
         }
         write.attr(card, "data-hover", i === hovered ? "" : null);
 
-        // Previews wait until the wheel has settled, then start one at a time.
-        // Starting seven at once in the middle of the move made it stutter.
-        const play = !reduced && visible && m >= 1 && wheel.away < PLAY_WITHIN;
+        // Previews wait until the row has settled, then start one at a time.
+        // Starting several at once in the middle of the move made it stutter.
+        const play = !reduced && visible && m >= 1 && rest.inView;
         const ctl = ctls.current[i];
         if (ctl && play !== playing.current[i] && !(play && now - lastStart < 150)) {
           playing.current[i] = play;

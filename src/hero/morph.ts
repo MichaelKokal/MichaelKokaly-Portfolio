@@ -1,10 +1,15 @@
-import { lerp, mod, rad } from "../math";
-import { CARD_W, REEL_SLOTS, reelPose, reelScene } from "../ring/reel-ring";
-import { WHEEL_CARDS, WHEEL_CARD_W, dealPose } from "../wheel/deal-wheel";
+import { lerp, mod, rad, wrap180 } from "../math";
+import { CARD_W as RING_CARD_W, REEL_SLOTS, reelPose, reelScene } from "../ring/reel-ring";
+
+/** How many cards there are. Fewer projects than this just repeat. */
+export const CARD_COUNT = 34;
+/** Cards are laid out at this size (9:16) and scaled to fit the row. */
+export const CARD_W = 180;
+export const CARD_H = 320;
 
 /**
- * One card pose both layouts can be written in, so a card can travel from its
- * place on the ring to its place on the wheel:
+ * One card pose both the ring and the row can be written in, so a card can
+ * travel from its place on the ring to its place in the row:
  *   translate3d(x, y, z) rotateZ(roll) rotateX(tilt) rotateZ(spin) rotateY(yaw) scale(scale)
  */
 export type CardPose = {
@@ -19,18 +24,15 @@ export type CardPose = {
 };
 
 export const RING_PERSPECTIVE = 1000;
-export const WHEEL_PERSPECTIVE = 1800;
-const WHEEL_TILT = 12;
-const WHEEL_LIFT_Y = 50;
-const WHEEL_GROW = 1.14;
+export const ROW_PERSPECTIVE = 1800;
 
 /**
- * Which ring slot a wheel card plays during the intro, or null if it sits the
- * intro out. The 16 cards nearest the top of the wheel make the ring, in the
- * same order, so neighbours stay neighbours.
+ * Which ring slot a card plays during the intro, or null if it sits the intro
+ * out. The 16 cards nearest the middle of the row make the ring, in the same
+ * order, so neighbours stay neighbours.
  */
-export function ringSlotOf(i: number, count = WHEEL_CARDS): number | null {
-  const offset = i <= count / 2 ? i : i - count; // signed distance from the top card
+export function ringSlotOf(i: number, count = CARD_COUNT): number | null {
+  const offset = i <= count / 2 ? i : i - count; // signed distance from the middle card
   const k = 0 - offset; // the ring counts the other way round (and 0, not -0)
   return k >= -REEL_SLOTS / 2 && k < REEL_SLOTS / 2 ? k : null;
 }
@@ -54,33 +56,49 @@ export function ringIntroPose(k: number, formation: number, fit: number) {
     tilt: scene.tilt,
     spin: 0,
     yaw: p.yaw,
-    // Ring cards are 270px wide; the shared card is laid out at the wheel's size.
-    scale: p.scale * (CARD_W / WHEEL_CARD_W) * fit,
+    // Ring cards are 270px wide; the shared card is laid out smaller.
+    scale: p.scale * (RING_CARD_W / CARD_W) * fit,
   };
   return { pose, appear: p.appear };
 }
 
-/** A card on the resting wheel. */
-export function wheelRestPose(i: number, spin: number, fit: number) {
-  const d = dealPose(i, 1, 1, spin);
-  const th = rad(d.angle), ph = rad(WHEEL_TILT);
-  const S = fit * WHEEL_GROW;
-  // Pivot, rotate, push out...
-  const lx = -d.reach * Math.sin(th);
-  const ly = d.pivot + d.reach * Math.cos(th);
-  const lz = d.depth;
-  // ...then the scene's tip back, scale and lift.
-  const pose: CardPose = {
-    x: S * lx,
-    y: WHEEL_LIFT_Y + S * (ly * Math.cos(ph) - lz * Math.sin(ph)),
-    z: S * (ly * Math.sin(ph) + lz * Math.cos(ph)),
-    roll: 0,
-    tilt: WHEEL_TILT,
-    spin: d.angle,
-    yaw: d.flip,
-    scale: S * d.scale,
+export type StripLayout = {
+  /** Frame size in px. */
+  w: number;
+  h: number;
+  /** Space kept clear above (name and links) and below (the bar). */
+  top: number;
+  bottom: number;
+};
+
+/** The card size and spacing for a flat row that fills the space it is given. */
+export function stripMetrics(l: StripLayout) {
+  // As tall as the space allows, but never wider than most of the screen.
+  const cardH = Math.max(200, Math.min(l.h - l.top - l.bottom, ((l.w * 0.78) / CARD_W) * CARD_H));
+  const scale = cardH / CARD_H;
+  const cardW = CARD_W * scale;
+  const pitch = cardW * 1.1;
+  const y = (l.top + (l.h - l.bottom)) / 2 - l.h / 2;
+  return { cardW, cardH, scale, pitch, y };
+}
+
+/**
+ * A card in the flat row. The row is a circle of cards unrolled: its position
+ * is counted in degrees, one card step being 360 / CARD_COUNT, so cards that
+ * leave one side come back on the other and can swap projects off screen.
+ */
+export function stripPose(i: number, spin: number, l: StripLayout) {
+  const m = stripMetrics(l);
+  const home = wrap180(i * (360 / CARD_COUNT) - spin);
+  const x = (home / (360 / CARD_COUNT)) * m.pitch;
+  const pose: CardPose = { x, y: m.y, z: 0, roll: 0, tilt: 0, spin: 0, yaw: 0, scale: m.scale };
+  return {
+    pose,
+    visible: Math.abs(x) < l.w / 2 + m.cardW * 0.6,
+    /** Fully on screen. */
+    inView: Math.abs(x) + m.cardW / 2 < l.w / 2,
+    pitch: m.pitch,
   };
-  return { pose, visible: d.visible, away: d.away };
 }
 
 export function mixPose(a: CardPose, b: CardPose, m: number): CardPose {
@@ -96,7 +114,7 @@ export function mixPose(a: CardPose, b: CardPose, m: number): CardPose {
   };
 }
 
-export const scenePerspective = (m: number) => lerp(RING_PERSPECTIVE, WHEEL_PERSPECTIVE, m);
+export const scenePerspective = (m: number) => lerp(RING_PERSPECTIVE, ROW_PERSPECTIVE, m);
 
 const f = (n: number) => Math.round(n * 100) / 100;
 
