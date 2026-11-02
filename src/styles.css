@@ -474,16 +474,6 @@ button { font: inherit; color: inherit; }
 .drift { animation: drift 14s ease-in-out infinite alternate; transform-origin: 40% 30%; }
 @keyframes drift { to { transform: scale(1.22) translate(3%, 4%); } }
 
-.globe, .globe svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.meridian { transform-box: fill-box; transform-origin: center; animation: meridian 9s ease-in-out infinite; }
-@keyframes meridian {
-  0% { transform: scaleX(1); opacity: 1; }
-  50% { transform: scaleX(-1); opacity: 0.25; }
-  100% { transform: scaleX(1); opacity: 1; }
-}
-.pin-ring { fill: #fb923c; transform-box: fill-box; transform-origin: center; animation: ping 2.4s ease-out infinite; }
-@keyframes ping { from { transform: scale(1); opacity: 0.6; } to { transform: scale(3.4); opacity: 0; } }
-
 /* ---------- Bar under the cards ---------- */
 
 /* A frosted-glass bar with the headline, project count and languages. */

@@ -1,4 +1,3 @@
-import { globeArt } from "./covers";
 import type { PreviewSpec, Script } from "./projects";
 
 /**
@@ -24,8 +23,6 @@ export function mountPreview(host: HTMLElement, spec: PreviewSpec): PreviewCtl {
       return css(host, spec.images.map((src, i) => img(src, `pan pan-${i}`)), shown, hidden);
     case "drift":
       return css(host, [img(spec.image, "drift")], shown, hidden);
-    case "globe":
-      return css(host, [globe()], shown, hidden);
   }
 }
 
@@ -91,21 +88,6 @@ function img(src: string, className: string) {
   i.className = className;
   i.draggable = false;
   return i;
-}
-
-function globe() {
-  const wrap = document.createElement("div");
-  wrap.className = "globe";
-  const meridians = Array.from({ length: 6 }, (_, i) => `<ellipse class="meridian" style="animation-delay:${(-i * 9) / 6}s" cx="270" cy="400" rx="190" ry="190"/>`).join("");
-  wrap.innerHTML = `<svg viewBox="0 0 540 960" preserveAspectRatio="xMidYMid slice">
-    <defs><linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fed7aa"/><stop offset="1" stop-color="#ea580c"/></linearGradient>
-    <radialGradient id="gbg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#2b1507"/><stop offset="1" stop-color="#050403"/></radialGradient></defs>
-    <rect width="540" height="960" fill="url(#gbg)"/>
-    ${globeArt(270, 400, 190, false).replace(/<ellipse cx="270" cy="400" rx="[\d.]+" ry="190"\/>/g, "")}
-    <g fill="none" stroke="url(#orange)" stroke-width="2.6">${meridians}</g>
-    <g class="pins">${[[200, 330], [330, 380], [250, 470], [372, 300]].map(([x, y], i) => `<circle class="pin-ring" style="animation-delay:${i * 0.6}s" cx="${x}" cy="${y}" r="8"/><circle cx="${x}" cy="${y}" r="6.5" fill="#fff7ed"/>`).join("")}</g>
-  </svg>`;
-  return wrap;
 }
 
 const ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };

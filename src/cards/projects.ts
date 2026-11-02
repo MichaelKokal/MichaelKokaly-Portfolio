@@ -10,7 +10,6 @@ export type PreviewSpec =
   | { kind: "terminal"; script: Script }
   | { kind: "pan"; images: string[] }
   | { kind: "drift"; image: string }
-  | { kind: "globe" }
   | { kind: "video"; src: string };
 
 export type Project = {
@@ -149,9 +148,9 @@ export function buildProjects(): Project[] {
       stack: "React · Supabase · three-globe",
       repo: GH + "Digital-Footprint",
       live: "https://digital-footprint-murex.vercel.app",
-      cover: coverUrl("footprint"),
+      cover: "/covers/digital-footprint.png",
       accent: "#fb923c",
-      preview: { kind: "globe" },
+      preview: { kind: "drift", image: "/covers/digital-footprint.png" },
     },
     {
       id: "quiz",

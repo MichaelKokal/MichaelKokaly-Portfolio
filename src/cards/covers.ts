@@ -9,58 +9,6 @@ const wrap = (defs: string, body: string) =>
 
 const toUrl = (svg: string) => URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
 
-// Seeded so the stars are the same on every load.
-function rng(seed: number) {
-  return () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-}
-
-function stars(seed: number, n: number, color: string) {
-  const r = rng(seed);
-  let out = "";
-  for (let i = 0; i < n; i++) {
-    out += `<circle cx="${(r() * W).toFixed(1)}" cy="${(r() * H).toFixed(1)}" r="${(0.6 + r() * 1.6).toFixed(2)}" fill="${color}" opacity="${(0.2 + r() * 0.6).toFixed(2)}"/>`;
-  }
-  return out;
-}
-
-export function globeArt(cx = 270, cy = 400, r = 190, withPins = true) {
-  const meridians = [1, 0.78, 0.48, 0.16]
-    .map((k) => `<ellipse cx="${cx}" cy="${cy}" rx="${r * k}" ry="${r}"/>`)
-    .join("");
-  const parallels = [-0.62, -0.3, 0, 0.3, 0.62]
-    .map((k) => {
-      const y = cy + r * k;
-      const half = r * Math.sqrt(1 - k * k);
-      return `<ellipse cx="${cx}" cy="${y}" rx="${half}" ry="${half * 0.12}"/>`;
-    })
-    .join("");
-  const pins = withPins
-    ? [
-        [cx - 70, cy - 60],
-        [cx + 60, cy - 20],
-        [cx - 20, cy + 70],
-        [cx + 105, cy + 85],
-      ]
-        .map(
-          ([x, y]) =>
-            `<circle cx="${x}" cy="${y}" r="16" fill="#fb923c" opacity=".22"/><circle cx="${x}" cy="${y}" r="6.5" fill="#fff7ed"/>`,
-        )
-        .join("")
-    : "";
-  return `<g fill="none" stroke="url(#orange)" stroke-width="2.6" opacity=".95">${meridians}${parallels}</g>${pins}`;
-}
-
-const footprint = () =>
-  wrap(
-    `<radialGradient id="bg" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#2b1507"/><stop offset="1" stop-color="#050403"/></radialGradient>
-     <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f97316" stop-opacity=".38"/><stop offset="1" stop-color="#f97316" stop-opacity="0"/></radialGradient>
-     <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fed7aa"/><stop offset="1" stop-color="#ea580c"/></linearGradient>`,
-    `<rect width="${W}" height="${H}" fill="url(#bg)"/>${stars(7, 70, "#fde6cf")}
-     <circle cx="270" cy="400" r="320" fill="url(#glow)"/>
-     <ellipse cx="270" cy="400" rx="262" ry="64" fill="none" stroke="#fdba74" stroke-opacity=".45" stroke-width="2" stroke-dasharray="3 9" transform="rotate(-16 270 400)"/>
-     ${globeArt()}`,
-  );
-
 const quiz = () =>
   wrap(
     `<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fdeaa1"/><stop offset="1" stop-color="#f3b52f"/></linearGradient>
@@ -201,7 +149,6 @@ const houseOrArt = () => {
 };
 
 export const COVERS = {
-  footprint,
   quiz,
   redlight,
   connectFour,
