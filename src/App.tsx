@@ -1,5 +1,6 @@
 import { motion, useTransform, type MotionValue } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { About } from "./about/About";
 import { buildProjects, projectAssets, withPlainCovers, type Project } from "./cards/projects";
 import { Loader } from "./loader/Loader";
 import { useEntrance } from "./loader/useEntrance";
@@ -21,6 +22,20 @@ export function App() {
   const entrance = useEntrance(assets);
   const { stage, home, expansion } = entrance;
   const wordmark = useRef<HTMLAnchorElement>(null);
+  const aboutLink = useRef<HTMLAnchorElement>(null);
+
+  // The About me panel follows #about, so the link can be shared and Back closes it.
+  const [about, setAbout] = useState(() => location.hash === "#about");
+  useEffect(() => {
+    const sync = () => setAbout(location.hash === "#about");
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  const closeAbout = useCallback(() => {
+    if (location.hash === "#about") history.replaceState(null, "", location.pathname + location.search);
+    setAbout(false);
+    aboutLink.current?.focus();
+  }, []);
 
   return (
     <div className={`page ${home ? "is-home" : ""} ${stage === "done" ? "" : "is-entering"}`}>
@@ -55,7 +70,13 @@ export function App() {
         <section className="headline headline-bar" aria-hidden={!home}>
           <div className="bar-title">
             <h1>
-              Things I've <em>built.</em>
+              Things I've{" "}
+              <em>
+                <a ref={aboutLink} className="bar-about" href="#about" tabIndex={home ? 0 : -1}>
+                  built
+                </a>
+                .
+              </em>
             </h1>
             <p>Full-stack web apps, data tools and games I&apos;ve built as a Computer Science student at UIC. Click any card to dive deeper.</p>
           </div>
@@ -76,6 +97,7 @@ export function App() {
         </section>
       </main>
 
+      <About open={about && stage === "done"} onClose={closeAbout} />
       {stage !== "done" && <Loader entrance={entrance} wordmark={wordmark} brand={BRAND} />}
     </div>
   );
