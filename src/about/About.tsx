@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 type Props = { open: boolean; onClose(): void };
 
 const facts = [
-  ["Currently", "Software Engineering Intern at Mylon Education, building an AI assistant that answers university HR policy questions and cites its sources."],
+  ["Currently", "SWE Intern at Mylon Education, building an AI assistant that answers university HR policy questions and cites its sources."],
   ["What I build", "Backend services, REST APIs, and the React frontends on top of them."],
   ["How I ship", "Tested and deployed through CI, on everything from Azure servers to Vercel."],
   ["Open to", "Backend and full-stack software engineering roles."],
