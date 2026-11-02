@@ -257,6 +257,8 @@ button { font: inherit; color: inherit; }
 /* While the intro plays, keep each card's drawing as it moves instead of
    redrawing it at every new size. It is drawn crisp again once the row settles. */
 .page.is-entering .pcard { will-change: transform; }
+/* Cards can't be clicked until the intro is over. */
+.page.is-entering .pcard { pointer-events: none; }
 .pcard {
   --u: 1;
   position: absolute;
