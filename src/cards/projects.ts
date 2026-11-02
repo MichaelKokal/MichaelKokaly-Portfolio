@@ -153,6 +153,18 @@ export function buildProjects(): Project[] {
       preview: { kind: "drift", image: "/covers/digital-footprint.png" },
     },
     {
+      id: "haki",
+      name: "Haki",
+      blurb: "Speak Palestinian Arabic and get live English, a pronunciation score and tips.",
+      lang: "JavaScript",
+      stack: "Node · Express · Web Speech API",
+      repo: GH + "Haki",
+      live: "https://haki.michaelkokaly.com",
+      cover: "/covers/haki.png",
+      accent: "#4cc497",
+      preview: { kind: "drift", image: "/covers/haki.png" },
+    },
+    {
       id: "quiz",
       name: "Who Are You Between the Pages?",
       blurb: "A personality quiz that matches you to a character from three novels.",
