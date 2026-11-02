@@ -50,10 +50,10 @@ button { font: inherit; color: inherit; }
   z-index: 0;
   will-change: opacity;
   background:
-    radial-gradient(80% 55% at 72% 100%, rgba(255, 205, 160, 0.9), rgba(255, 205, 160, 0) 70%),
-    radial-gradient(60% 40% at 18% 18%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(50% 30% at 85% 25%, rgba(214, 196, 236, 0.6), rgba(214, 196, 236, 0) 70%),
-    linear-gradient(180deg, #a9c0e4 0%, #c4cde9 34%, #e7d3de 66%, #f7dcc4 100%);
+    radial-gradient(75% 55% at 50% 100%, rgba(255, 180, 110, 0.85), rgba(255, 180, 110, 0) 70%),
+    radial-gradient(55% 40% at 15% 15%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(45% 35% at 88% 22%, rgba(255, 225, 140, 0.7), rgba(255, 225, 140, 0) 70%),
+    linear-gradient(180deg, #fbefc6 0%, #fbe0b0 40%, #f8c79a 75%, #f3b08e 100%);
 }
 /* A little paint grain so the sky doesn't read as a flat gradient. */
 .sky::after {
