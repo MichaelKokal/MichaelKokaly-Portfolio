@@ -109,6 +109,9 @@ export function attachGestures(root: HTMLElement, h: Handlers, enabled: () => bo
   root.addEventListener("pointerup", up);
   root.addEventListener("pointercancel", up);
   root.addEventListener("pointerleave", leave);
+  // Opening a link in a new tab fires no pointerleave, so coming back would leave the
+  // last card hovered (buttons showing, wheel held still) until the mouse moved.
+  window.addEventListener("blur", leave);
   root.addEventListener("click", click, true);
   root.addEventListener("wheel", wheel, { passive: false });
   root.addEventListener("dragstart", noDrag);
@@ -121,6 +124,7 @@ export function attachGestures(root: HTMLElement, h: Handlers, enabled: () => bo
       root.removeEventListener("pointerup", up);
       root.removeEventListener("pointercancel", up);
       root.removeEventListener("pointerleave", leave);
+      window.removeEventListener("blur", leave);
       root.removeEventListener("click", click, true);
       root.removeEventListener("wheel", wheel);
       root.removeEventListener("dragstart", noDrag);

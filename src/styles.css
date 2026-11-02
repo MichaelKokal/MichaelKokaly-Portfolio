@@ -437,7 +437,9 @@ button { font: inherit; color: inherit; }
   vertical-align: 0.05em;
 }
 .pcard-demo:hover { background: #fff; color: #111; }
-.pcard[data-hover] .pcard-cta, .pcard:focus-within .pcard-cta { opacity: 1; transform: none; }
+/* Keyboard focus only: a clicked link keeps focus when you come back to the tab,
+   which would otherwise leave the buttons showing on a card you aren't hovering. */
+.pcard[data-hover] .pcard-cta, .pcard:has(:focus-visible) .pcard-cta { opacity: 1; transform: none; }
 .pcard-link:focus-visible, .pcard-demo:focus-visible { outline: none; }
 .pcard:has(.pcard-link:focus-visible) .pcard-front { box-shadow: 0 0 0 calc(3px * var(--u)) #fff, 0 0 0 calc(6px * var(--u)) var(--ink); }
 .pcard-demo:focus-visible { box-shadow: 0 0 0 calc(2px * var(--u)) #fff, 0 0 0 calc(4px * var(--u)) var(--ink); }
