@@ -107,12 +107,16 @@ button { font: inherit; color: inherit; }
   cursor: default;
 }
 .wordmark-roll {
+  position: relative;
   display: block;
+  padding-top: 1.2em;
   transform: translateY(-1.2em);
   transition: transform 0.45s var(--ease);
 }
 .wordmark:hover .wordmark-roll { transform: none; }
 .wordmark-line { display: block; height: 1.2em; }
+/* The hover line sits above the name without widening the header, so the links keep their room on phones. */
+.wordmark-line:first-child { position: absolute; top: 0; left: 0; }
 .nav {
   display: flex;
   align-items: center;
@@ -645,10 +649,11 @@ button { font: inherit; color: inherit; }
 
 @media (max-width: 720px) {
   :root { --inset: 6px; --radius: 16px; }
-  .header { padding: 16px; }
+  /* Tight enough that the name and all three links fit a 360px phone. */
+  .header { padding: 16px 12px; gap: 8px; }
   .wordmark { font-size: 20px; }
   .nav { gap: 0; }
-  .nav-link { padding: 7px 7px; font-size: 12.5px; }
+  .nav-link { padding: 7px 5px; font-size: 12.5px; }
   .loader-brand { font-size: 40px; left: 20px; top: 24px; }
   .loader-progress { right: 18px; bottom: 18px; }
   .loader-skip { left: 18px; bottom: 24px; }
