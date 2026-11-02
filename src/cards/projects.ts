@@ -88,27 +88,39 @@ function pegGame(): Script {
   const pegs: Record<string, boolean> = {};
   "ABCDEFGHIJKLMNO".split("").forEach((c) => (pegs[c] = c !== "A"));
   const rows = ["A", "BC", "DEF", "GHIJ", "KLMNO"];
-  const draw = () => rows.map((r, i) => " ".repeat(4 - i) + r.split("").map((c) => (pegs[c] ? "T" : ".")).join(" "));
-  const out: Script = ["Jump pegs until only one is left.", "", ...draw(), ""];
+  // The board as the program prints it, with the hole letters alongside.
+  const draw = () =>
+    rows.map((r, i) => " ".repeat(4 - i) + r.split("").map((c) => (pegs[c] ? "T" : ".")).join(" ") + " ".repeat(12 - 2 * i) + r.split("").join(" "));
+  const out: Script = [];
   for (const move of ["DBA", "FED", "MIF", "GHI", "NIE"]) {
     const [from, over, to] = move.split("");
-    out.push(`Enter your move: §${move}`);
+    out.push(...draw(), "Enter move (for example FCA) or Q to quit: ", `§${move}`, "");
     pegs[from] = false; pegs[over] = false; pegs[to] = true;
-    out.push("", ...draw(), "");
   }
+  out.push(...draw(), "");
   return out;
 }
 
 function houseOrArt(): Script {
   const tree = [1, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21].map((n) => " ".repeat((21 - n) / 2) + "*".repeat(n));
   tree.push("        |   |", "        |___|");
-  const house = (floors: number) => [
-    "    /\\", "   /  \\", "  /    \\", " /______\\",
-    ...Array.from({ length: floors }, () => [" |[]  []|", " |______|"]).flat(),
-  ];
+  // Built the same way the C++ program builds it, so it matches its real output.
+  const house = (floors: number) => {
+    let roof = 7 + (floors - 1) * 3;
+    const out = [" ".repeat(floors) + "_".repeat(roof)];
+    for (let w = 0; w < floors; w++) {
+      out.push(" ".repeat(floors - w - 1) + "/" + " ".repeat(roof) + "\\");
+      roof += 2;
+    }
+    const tops = "|   " + "_    ".repeat(floors - 1) + "_   |";
+    for (let f = 1; f < floors; f++) out.push(tops, "| " + " |_| ".repeat(floors) + " |", "|  " + "     ".repeat(floors) + "|");
+    out.push(tops, "|  | " + "|  |_".repeat(floors - 1) + "|  |", "|  | |" + "     ".repeat(floors - 1) + "  |", "///" + "/////".repeat(floors) + "/");
+    return out;
+  };
+  const menu = ["Program 1: House", "Which option would you like?", "1. Display house", "2. Display original art"];
   return [
-    "Enter 1 for a house or 2 for art: §2", "", ...tree, "",
-    "Enter 1 for a house or 2 for art: §1", "How many floors? §3", "", ...house(3), "",
+    ...menu, "Your choice: §1", "How many floors should the house have? §3", ...house(3), "",
+    ...menu, "Your choice: §2", "", ...tree, "",
   ];
 }
 
