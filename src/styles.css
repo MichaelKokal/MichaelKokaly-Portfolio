@@ -633,7 +633,13 @@ button { font: inherit; color: inherit; }
 
 .scene { position: absolute; inset: 0; perspective: var(--persp, 1000px); }
 .stage { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
-.hero .pcard { --u: 0.6667; width: 180px; height: 320px; margin: -160px 0 0 -90px; }
+/* --card-size is the row's scale, set by the hero, so cards are drawn at the size they're shown in the row. */
+.hero .pcard {
+  --u: calc(0.6667 * var(--card-size, 1));
+  width: calc(180px * var(--card-size, 1));
+  height: calc(320px * var(--card-size, 1));
+  margin: calc(-160px * var(--card-size, 1)) 0 0 calc(-90px * var(--card-size, 1));
+}
 
 /* ---------- Small screens ---------- */
 

@@ -5,7 +5,7 @@ import type { PreviewCtl } from "../cards/preview";
 import type { Project } from "../cards/projects";
 import { attachGestures, createWriter, hitSlot } from "../cards/runtime";
 import { nearestAngle, recycledIndex } from "../math";
-import { CARD_COUNT, mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, stripPose, type StripLayout } from "./morph";
+import { CARD_COUNT, mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, stripMetrics, stripPose, type StripLayout } from "./morph";
 
 type Props = {
   projects: Project[];
@@ -114,6 +114,11 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
       spin.current += (target.current - spin.current) * (1 - Math.exp(-dt * 5));
 
       write.style(el, "--persp", `${Math.round(scenePerspective(m))}px`);
+      // Cards are laid out at their size in the row, and only ever scaled down from it.
+      // While the intro plays the browser keeps each card's first drawing, so a card
+      // laid out small and scaled up came out blurry until the row settled.
+      const cardSize = Math.round(stripMetrics(row).scale * 1000) / 1000;
+      write.style(el, "--card-size", String(cardSize));
 
       let swapped: number[] | null = null;
       for (const i of cards) {
@@ -142,7 +147,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
         // Hide, don't fade: hidden cards cost the compositor nothing.
         write.style(card, "visibility", visible ? "visible" : "hidden");
         if (visible) {
-          write.style(card, "transform", poseTransform(pose));
+          write.style(card, "transform", poseTransform({ ...pose, scale: pose.scale / cardSize }));
           write.style(card, "--appear", String(Math.round(appear * 100) / 100));
         } else if (!rest.visible && (m >= 1 || k === null)) {
           // Off screen: safe to swap which project this card shows.
