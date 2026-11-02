@@ -8,6 +8,7 @@ const facts = [
   ["How I ship", "Tested and deployed through CI, on everything from Azure servers to Vercel."],
   ["Open to", "Backend and full-stack software engineering roles."],
   ["I also speak", "Arabic (fluent) and Spanish (basic)."],
+  ["Outside the loop", "Dancing and coaching on a Dabke dance team, playing piano, and ping pong."],
 ];
 
 /** The About me panel. It slides up over the cards and closes with Escape, the close button or a click outside. */
