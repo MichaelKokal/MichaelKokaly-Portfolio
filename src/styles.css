@@ -99,7 +99,20 @@ button { font: inherit; color: inherit; }
   color: var(--ink);
   text-decoration: none;
   white-space: nowrap;
+  /* One line tall. Clipped top and bottom only, so the longer line can run past the name's width. */
+  display: block;
+  height: 1.2em;
+  overflow-x: visible;
+  overflow-y: clip;
+  cursor: default;
 }
+.wordmark-roll {
+  display: block;
+  transform: translateY(-1.2em);
+  transition: transform 0.45s var(--ease);
+}
+.wordmark:hover .wordmark-roll { transform: none; }
+.wordmark-line { display: block; height: 1.2em; }
 .nav {
   display: flex;
   align-items: center;
@@ -637,5 +650,5 @@ button { font: inherit; color: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .frame, .nav, .headline > *, .bar-about, .about, .about-panel { transition: none; }
+  .frame, .nav, .headline > *, .bar-about, .about, .about-panel, .wordmark-roll { transition: none; }
 }

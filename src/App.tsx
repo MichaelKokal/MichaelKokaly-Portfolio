@@ -21,7 +21,7 @@ export function App() {
   const assets = useMemo(() => (projects ? projectAssets(projects) : null), [projects]);
   const entrance = useEntrance(assets);
   const { stage, home, expansion } = entrance;
-  const wordmark = useRef<HTMLAnchorElement>(null);
+  const wordmark = useRef<HTMLSpanElement>(null);
   const aboutLink = useRef<HTMLAnchorElement>(null);
 
   // The About me panel follows #about, so the link can be shared and Back closes it.
@@ -40,9 +40,17 @@ export function App() {
   return (
     <div className={`page ${home ? "is-home" : ""} ${stage === "done" ? "" : "is-entering"}`}>
       <header className="header" aria-hidden={!home}>
-        <a ref={wordmark} className="wordmark" href="https://github.com/MichaelKokal" style={{ opacity: home ? 1 : 0 }}>
-          {BRAND}
-        </a>
+        {/* Hovering the name rolls it down and a second line drops in from above. */}
+        <span className="wordmark" style={{ opacity: home ? 1 : 0 }}>
+          <span className="wordmark-roll">
+            <span className="wordmark-line" aria-hidden="true">
+              Now accepting pull requests
+            </span>
+            <span className="wordmark-line">
+              <span ref={wordmark}>{BRAND}</span>
+            </span>
+          </span>
+        </span>
         <nav className="nav">
           <a className="nav-link" href="https://github.com/MichaelKokal" target="_blank" rel="noreferrer">
             GitHub ↗
