@@ -47,7 +47,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
   const n = projects.length;
   const [reels, setReels] = useState(() => cards.map((i) => recycledIndex(i, CARD_COUNT, i * STEP, n)));
   const reelsRef = useRef(reels);
-  const els = useRef<(HTMLAnchorElement | null)[]>([]);
+  const els = useRef<(HTMLElement | null)[]>([]);
   const ctls = useRef<(PreviewCtl | null)[]>([]);
   const playing = useRef<boolean[]>([]);
   // The row's position, counted in the same degrees the intro ring uses: one
@@ -57,7 +57,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
   const live = useRef(interactive);
   live.current = interactive;
 
-  const onMount = useCallback((slot: number, el: HTMLAnchorElement | null, ctl: PreviewCtl | null) => {
+  const onMount = useCallback((slot: number, el: HTMLElement | null, ctl: PreviewCtl | null) => {
     els.current[slot] = el;
     ctls.current[slot] = ctl;
     playing.current[slot] = false;
