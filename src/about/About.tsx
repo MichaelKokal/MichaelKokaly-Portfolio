@@ -3,10 +3,11 @@ import { useEffect, useRef } from "react";
 type Props = { open: boolean; onClose(): void };
 
 const facts = [
+  ["Currently", "Software Engineering Intern at Mylon Education, building an AI assistant that answers university HR policy questions and cites its sources."],
   ["What I build", "Backend services, REST APIs, and the React frontends on top of them."],
-  ["Ask me about", "Java, Spring Boot, PostgreSQL, and why your query needs an index."],
   ["How I ship", "Tested and deployed through CI, on everything from Azure servers to Vercel."],
   ["Open to", "Backend and full-stack software engineering roles."],
+  ["I also speak", "Arabic (fluent) and Spanish (basic)."],
 ];
 
 /** The About me panel. It slides up over the cards and closes with Escape, the close button or a click outside. */
@@ -33,7 +34,7 @@ export function About({ open, onClose }: Props) {
         <button ref={close} className="about-close" onClick={onClose} aria-label="Close About me" tabIndex={open ? 0 : -1}>
           ×
         </button>
-        <p className="about-eyebrow">Computer Science · University of Illinois Chicago · Class of 2028</p>
+        <p className="about-eyebrow">Computer Science · UIC · Class of 2028 · 3.83 GPA</p>
         <h2 id="about-title">
           About <em>me.</em>
         </h2>

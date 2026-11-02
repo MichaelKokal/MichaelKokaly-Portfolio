@@ -70,13 +70,11 @@ export function App() {
         <section className="headline headline-bar" aria-hidden={!home}>
           <div className="bar-title">
             <h1>
-              Things I've{" "}
-              <em>
-                <a ref={aboutLink} className="bar-about" href="#about" tabIndex={home ? 0 : -1}>
-                  built
-                </a>
-                .
-              </em>
+              Things{" "}
+              <a ref={aboutLink} className="bar-about" href="#about" tabIndex={home ? 0 : -1}>
+                I&apos;ve
+              </a>{" "}
+              <em>built.</em>
             </h1>
             <p>Full-stack web apps, data tools and games I&apos;ve built as a Computer Science student at UIC. Click any card to dive deeper.</p>
           </div>
