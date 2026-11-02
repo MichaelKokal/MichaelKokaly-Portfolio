@@ -44,7 +44,7 @@ export function App() {
         <span className="wordmark" style={{ opacity: home ? 1 : 0 }}>
           <span className="wordmark-roll">
             <span className="wordmark-line" aria-hidden="true">
-              Now accepting pull requests
+              Open to SWE roles. Let&apos;s talk.
             </span>
             <span className="wordmark-line">
               <span ref={wordmark}>{BRAND}</span>
