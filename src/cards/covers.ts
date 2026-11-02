@@ -148,7 +148,36 @@ const houseOrArt = () => {
   );
 };
 
+const orientalStudio = () => {
+  // A song's waveform with its beats marked, the maqsoum pattern under it, and the keyboard.
+  const bars = Array.from({ length: 64 }, (_, i) => {
+    const h = 30 + 90 * Math.abs(Math.sin(i * 0.9) * Math.cos(i * 0.23)) + (i % 8 === 0 ? 40 : 0);
+    return `<rect x="${52 + i * 7}" y="${330 - h / 2}" width="4" height="${h}" rx="2" fill="#fb7185" opacity=".8"/>`;
+  }).join("");
+  const beats = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<path d="M${52 + i * 56} 220 L${52 + i * 56} 440" stroke="#f5c76a" stroke-width="2" stroke-dasharray="3 7" opacity=".55"/>`).join("");
+  const steps = [..."D.T...T.D...T..."].map((c, i) => {
+    const x = 66 + i * 27;
+    if (c === "D") return `<circle cx="${x}" cy="560" r="14" fill="#fb7185"/>`;
+    if (c === "T") return `<circle cx="${x}" cy="560" r="8" fill="#f5c76a"/>`;
+    return `<circle cx="${x}" cy="560" r="3" fill="#6b5a8e"/>`;
+  }).join("");
+  const kw = 31;
+  let keys = "";
+  for (let k = 0; k < 14; k++) keys += `<rect x="${53 + k * kw}" y="680" width="${kw - 3}" height="170" rx="4" fill="#f4eee4"/>`;
+  for (let k = 0; k < 13; k++) if (![2, 6].includes(k % 7)) keys += `<rect x="${53 + k * kw + kw * 0.62}" y="680" width="${kw * 0.68}" height="104" rx="3" fill="#1a1033"/>`;
+  return wrap(
+    `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22143f"/><stop offset="1" stop-color="#0b0619"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bg)"/>
+     ${beats}${bars}
+     <rect x="44" y="528" width="452" height="64" rx="32" fill="#2b1d4d"/>
+     ${steps}
+     <rect x="40" y="660" width="460" height="204" rx="14" fill="#2b1d4d"/>
+     ${keys}`,
+  );
+};
+
 export const COVERS = {
+  orientalStudio,
   quiz,
   redlight,
   connectFour,

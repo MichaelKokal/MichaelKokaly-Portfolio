@@ -126,6 +126,26 @@ function redlight(): Script {
   ];
 }
 
+function orientalStudio(): Script {
+  return [
+    "$ §python studio.py --list",
+    "  maqsoum  D.T. | ..T. | D... | T...",
+    "  baladi   D.D. | ..T. | D... | T...",
+    "  saidi    D.T. | ..D. | D... | T...",
+    "  malfuf   D..T | ..T. | D..T | ..T.",
+    "  ayoub    D..K | D.T. | D..K | D.T.",
+    "  dabke    D.TK | D.T. | D.TK | D.T.",
+    "",
+    "$ §python studio.py songs/dabke.mp3 --rhythm dabke --fill",
+    "Loading songs/dabke.mp3 ...",
+    "Finding the beat ...",
+    "  about 99 BPM, 412 beats, beat 1 guessed at position 0",
+    "  rhythm: dabke (filled)",
+    "Playing - press Ctrl+C to stop.",
+    "",
+  ];
+}
+
 export function buildProjects(): Project[] {
   return [
     {
@@ -163,6 +183,17 @@ export function buildProjects(): Project[] {
       cover: "/covers/haki.png",
       accent: "#4cc497",
       preview: { kind: "drift", image: "/covers/haki.png" },
+    },
+    {
+      id: "oriental",
+      name: "Oriental Studio",
+      blurb: "Plays Arabic darbuka rhythms in time with any song, even when the tempo drifts.",
+      lang: "Python",
+      stack: "librosa · NumPy · sounddevice",
+      repo: GH + "OrientalStudio",
+      cover: coverUrl("orientalStudio"),
+      accent: "#fb7185",
+      preview: { kind: "terminal", script: orientalStudio() },
     },
     {
       id: "quiz",
