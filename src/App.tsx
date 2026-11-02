@@ -57,7 +57,7 @@ export function App() {
             <h1>
               Things I've <em>built.</em>
             </h1>
-            <p>From C++ terminal games to a live map of every plane over Chicago. Click any card to open it on GitHub.</p>
+            <p>Full-stack web apps, data tools and games I&apos;ve built as a Computer Science student at UIC. Click any card to see the code.</p>
           </div>
           <div className="bar-meta">
             <div className="bar-count">
