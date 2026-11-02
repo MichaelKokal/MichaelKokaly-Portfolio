@@ -33,7 +33,9 @@ export const ProjectCard = memo(function ProjectCard({ project, number, slot, on
       ref={el}
       className="pcard"
       data-slot={slot}
-      onFocus={() => onFocusSlot(slot)}
+      // Only keyboard focus slides the card to the middle. A mouse click focuses the
+      // link too, and moving the card then made the click miss.
+      onFocus={(e) => e.target.matches(":focus-visible") && onFocusSlot(slot)}
       style={{ "--accent": project.accent } as React.CSSProperties}
     >
       <div className="pcard-face pcard-front">
