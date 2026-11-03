@@ -1,5 +1,5 @@
-import { lerp, mod, outCubic, rad, span, wrap180 } from "../math";
-import { CARD_W as RING_CARD_W, REEL_SLOTS, reelPose, reelScene, type Pose, type Scene } from "../ring/reel-ring";
+import { lerp, mod, rad, wrap180 } from "../math";
+import { CARD_W as RING_CARD_W, REEL_SLOTS, reelPose, reelScene } from "../ring/reel-ring";
 
 /** How many cards there are. Fewer projects than this just repeat. */
 export const CARD_COUNT = 34;
@@ -26,21 +26,15 @@ export type CardPose = {
 export const RING_PERSPECTIVE = 1000;
 export const ROW_PERSPECTIVE = 1800;
 
-/** The intro deck and ring hold one card per project, up to this many. Past 16, the deck's cards would sit under 5px apart and flicker through each other. */
-export const MAX_RING = 16;
-
-/** How many cards make the deck and the ring for this many projects. */
-export const ringCount = (projects: number) => Math.max(1, Math.min(projects, MAX_RING));
-
 /**
  * Which ring slot a card plays during the intro, or null if it sits the intro
- * out. The `slots` cards nearest the middle of the row make the ring, in the
- * same order, so neighbours stay neighbours.
+ * out. The 16 cards nearest the middle of the row make the ring, in the same
+ * order, so neighbours stay neighbours.
  */
-export function ringSlotOf(i: number, slots = REEL_SLOTS, count = CARD_COUNT): number | null {
+export function ringSlotOf(i: number, count = CARD_COUNT): number | null {
   const offset = i <= count / 2 ? i : i - count; // signed distance from the middle card
   const k = 0 - offset; // the ring counts the other way round (and 0, not -0)
-  return k >= -slots / 2 && k < slots / 2 ? k : null;
+  return k >= -REEL_SLOTS / 2 && k < REEL_SLOTS / 2 ? k : null;
 }
 
 /**
@@ -50,34 +44,18 @@ export function ringSlotOf(i: number, slots = REEL_SLOTS, count = CARD_COUNT): n
  */
 export const RING_OFFSET = { x: 0, y: -100 };
 
-/*
- * The intro in three parts, counted in shares of the formation: the cards land
- * one at a time on a deck at the front of the ring, the full deck rests, then
- * the cards slide out of it and round the ring.
- */
-export const DECK_LAND = 0.3;
-export const DECK_REST = 0.08;
-/** Share of the formation one card takes to drop onto the deck. */
-const DROP = 0.08;
-
-/**
- * The intro ring for this many cards. Its radius grows with the card count, so
- * neighbouring cards sit as close together as on the original 16-card ring.
- */
-export function ringScene(slots: number): Scene {
+/** A card on the small tilted ring of the intro. */
+export function ringIntroPose(k: number, formation: number, fit: number) {
   const scene = reelScene(0);
-  return { ...scene, radius: Math.max(240, (scene.radius * slots) / REEL_SLOTS) };
-}
-
-/** A card on the small tilted ring, in screen terms. */
-function toScreen(p: Pose, scene: Scene, fit: number): CardPose {
+  const a = mod(k * (360 / REEL_SLOTS) + 180, 360) - 180;
+  const p = reelPose(a, formation, scene);
   const t = rad(scene.tilt), r = rad(scene.roll);
   // The ring's tilt, then the dutch-angle roll, applied to the card's position.
   const y1 = -p.z * Math.sin(t);
   const z1 = p.z * Math.cos(t);
   const x2 = p.x * Math.cos(r) - y1 * Math.sin(r);
   const y2 = p.x * Math.sin(r) + y1 * Math.cos(r);
-  return {
+  const pose: CardPose = {
     x: (x2 + RING_OFFSET.x) * fit,
     y: (y2 + RING_OFFSET.y) * fit,
     z: z1 * fit,
@@ -88,34 +66,7 @@ function toScreen(p: Pose, scene: Scene, fit: number): CardPose {
     // Ring cards are 270px wide; the shared card is laid out smaller.
     scale: p.scale * (RING_CARD_W / CARD_W) * fit,
   };
-}
-
-/**
- * A card during the intro, for slot `k` of a ring of `slots` cards. Undealt
- * cards wait stacked at the front of the ring, which is the deck. They drop
- * onto it one at a time, bottom card first, then slide out of it round the ring
- * in order, so the cards only ever move along the ring's own shape.
- */
-export function ringIntroPose(k: number, slots: number, formation: number, fit: number) {
-  const scene = ringScene(slots);
-  const angle = mod(k * (360 / slots) + 180, 360) - 180;
-  const deal = span(formation, DECK_LAND + DECK_REST, 1);
-  const pose = toScreen(reelPose(angle, deal, scene), scene, fit);
-
-  // Level 0 is the top of the deck, nearest the camera, and the first dealt.
-  const level = Math.round(mod(angle + 180, 360) / (360 / slots)) % slots;
-  const landAt = ((slots - 1 - level) / slots) * (DECK_LAND - DROP);
-  const visible = formation > landAt;
-  // Only the very first card fades in, from the white page. Every card after it
-  // arrives solid: a card fading in over the dark deck showed as a white flash.
-  const fade = level === slots - 1 ? span(formation, 0, 0.05) : 1;
-
-  const land = span(formation, landAt, landAt + DROP);
-  if (land < 1) {
-    const from = { ...pose, y: pose.y - 60 * fit, scale: pose.scale * 1.06 };
-    return { pose: mixPose(from, pose, outCubic(land)), visible, fade };
-  }
-  return { pose, visible, fade };
+  return { pose, appear: p.appear };
 }
 
 export type StripLayout = {

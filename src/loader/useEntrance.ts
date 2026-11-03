@@ -4,8 +4,7 @@ import { prefersReducedMotion } from "../cards/runtime";
 
 export type Stage = "loading" | "revealing" | "done";
 
-// Longer than the deal alone: the deck builds and rests first.
-export const FORMATION_S = 3.8;
+export const FORMATION_S = 2.6;
 export const EXPANSION_S = 1.9;
 export const EXPANSION_EASE: [number, number, number, number] = [0.5, 0, 0.15, 1];
 /** Header, frame and headline start this far into the reveal, not after it. */
