@@ -42,7 +42,7 @@ export function ringSlotOf(i: number, count = CARD_COUNT): number | null {
  * toward the camera and lands low and right, so the ring is lifted and nudged left
  * to keep it on screen and clear of the loading counter.
  */
-export const RING_OFFSET = { x: -70, y: -110 };
+export const RING_OFFSET = { x: 0, y: -100 };
 
 /** A card on the small tilted ring of the intro. */
 export function ringIntroPose(k: number, formation: number, fit: number) {
