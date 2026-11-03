@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rad } from "../math";
-import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose, reelScene } from "../ring/reel-ring";
-import { CARD_COUNT, CARD_H, CARD_W, DECK_LAND, DECK_REST, MAX_RING, RING_OFFSET, deckPose, mixPose, ringCount, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
+import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose } from "../ring/reel-ring";
+import { CARD_COUNT, CARD_H, CARD_W, DECK_LAND, DECK_REST, MAX_RING, RING_OFFSET, mixPose, ringCount, ringIntroPose, ringScene, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
 
 // A tiny CSS transform model: 4x4 matrices, y pointing down, applied right to left.
 type M = number[][];
@@ -24,34 +24,43 @@ function expectSameCorners(a: M, aw: number, ah: number, b: M, bw: number, bh: n
 
 describe("ringIntroPose", () => {
   it("ends with each card exactly where the ring hero draws it", () => {
-    const scene = reelScene(0);
     for (const slots of [12, 16]) {
+      const scene = ringScene(slots);
       for (const k of [-slots / 2, -3, 0, 2, slots / 2 - 1]) {
-        const a = k * (360 / slots);
-        const p = reelPose(a, 1, scene);
+        const p = reelPose(k * (360 / slots), 1, scene);
         const ring = chain(T(RING_OFFSET.x, RING_OFFSET.y, 0), RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
         expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, slots, 1, 1).pose), CARD_W, CARD_H);
       }
     }
   });
 
+  it("keeps neighbouring cards as close as on the 16-card ring", () => {
+    const gap = (slots: number) => (2 * Math.PI * ringScene(slots).radius) / slots;
+    expect(gap(12)).toBeCloseTo(gap(16), 6);
+  });
+
   const slots = 12;
   const ks = Array.from({ length: slots }, (_, i) => i - slots / 2);
   const rested = DECK_LAND + DECK_REST / 2;
+  const at = (f: number) => ks.map((k) => ringIntroPose(k, slots, f, 1));
+  const onDeck = (p: { pose: CardPose }) => p.pose.yaw === -180;
 
-  it("stacks one card per slot into a deck before dealing", () => {
-    const poses = ks.map((k) => ringIntroPose(k, slots, rested, 1));
-    expect(poses.every((p) => p.visible)).toBe(true);
-    // Every card sits at its own height in the deck, each in front of the one below.
+  it("stacks every card into a deck at the front of the ring", () => {
+    const poses = at(rested);
+    expect(poses.every((p) => p.visible && onDeck(p))).toBe(true);
+    // The front of the ring is where the first card ends up for good.
+    const front = ringIntroPose(-slots / 2, slots, 1, 1).pose;
+    for (const p of poses) {
+      expect(Math.abs(p.pose.x - front.x)).toBeLessThan(40);
+      expect(Math.abs(p.pose.y - front.y)).toBeLessThan(40);
+    }
+    // Each card sits at its own depth, far enough apart not to flicker.
     const zs = poses.map((p) => p.pose.z).sort((a, b) => a - b);
-    zs.slice(1).forEach((z, i) => expect(z - zs[i]).toBeGreaterThanOrEqual(5));
-    // Each matches one level of the deck.
-    const levels = Array.from({ length: slots }, (_, l) => deckPose(l, slots, 1));
-    for (const p of poses) expect(levels.some((d) => d.z === p.pose.z && d.y === p.pose.y)).toBe(true);
+    zs.slice(1).forEach((z, i) => expect(z - zs[i]).toBeGreaterThan(5));
   });
 
   it("builds the deck from the bottom up", () => {
-    const shown = (f: number) => ks.filter((k) => ringIntroPose(k, slots, f, 1).visible).length;
+    const shown = (f: number) => at(f).filter((p) => p.visible).length;
     expect(shown(0)).toBe(0);
     let last = 0;
     for (let f = 0.01; f <= DECK_LAND; f += 0.01) {
@@ -59,22 +68,25 @@ describe("ringIntroPose", () => {
       last = shown(f);
     }
     expect(last).toBe(slots);
-    // The first card down is the bottom one, furthest back.
-    const first = ks.find((k) => ringIntroPose(k, slots, 0.001, 1).visible)!;
-    expect(ringIntroPose(first, slots, rested, 1).pose.z).toBe(0);
+    // The first card down is the one furthest back.
+    const first = ks.findIndex((k) => ringIntroPose(k, slots, 0.001, 1).visible);
+    const zs = at(rested).map((p) => p.pose.z);
+    expect(zs[first]).toBe(Math.min(...zs));
   });
 
   it("always deals the top card of the deck next", () => {
-    const top = deckPose(0, slots, 1);
-    for (let f = DECK_LAND + DECK_REST; f < 1; f += 0.02) {
-      const onDeck = ks.map((k) => ringIntroPose(k, slots, f, 1).pose).filter((p) => p.yaw === -180 && p.tilt === 0);
-      // Whatever is left is the bottom of the deck: its highest card is the top one remaining.
-      const remaining = onDeck.length;
-      if (remaining === 0) continue;
-      const highest = Math.max(...onDeck.map((p) => p.z));
-      expect(highest).toBe(deckPose(slots - remaining, slots, 1).z);
-      expect(highest).toBeLessThanOrEqual(top.z);
+    // The front card is the top of the deck and stays at the front, so
+    // watch the rest leave from behind it.
+    const rest = (f: number) => at(f).map((p, i) => ({ ...p, i })).filter((p) => p.i !== 0 && onDeck(p));
+    let prev = rest(rested);
+    for (let f = DECK_LAND + DECK_REST; f <= 1; f += 0.005) {
+      const now = rest(f);
+      const left = prev.filter((p) => !now.some((q) => q.i === p.i));
+      const stayed = Math.max(-Infinity, ...now.map((p) => p.pose.z));
+      for (const p of left) expect(p.pose.z).toBeGreaterThan(stayed);
+      prev = now;
     }
+    expect(prev.length).toBe(0);
   });
 });
 
