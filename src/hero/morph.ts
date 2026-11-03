@@ -37,6 +37,13 @@ export function ringSlotOf(i: number, count = CARD_COUNT): number | null {
   return k >= -REEL_SLOTS / 2 && k < REEL_SLOTS / 2 ? k : null;
 }
 
+/**
+ * Where the intro ring sits, from the middle of the screen. Its front card comes
+ * toward the camera and lands low and right, so the ring is lifted and nudged left
+ * to keep it on screen and clear of the loading counter.
+ */
+export const RING_OFFSET = { x: -70, y: -110 };
+
 /** A card on the small tilted ring of the intro. */
 export function ringIntroPose(k: number, formation: number, fit: number) {
   const scene = reelScene(0);
@@ -49,8 +56,8 @@ export function ringIntroPose(k: number, formation: number, fit: number) {
   const x2 = p.x * Math.cos(r) - y1 * Math.sin(r);
   const y2 = p.x * Math.sin(r) + y1 * Math.cos(r);
   const pose: CardPose = {
-    x: x2 * fit,
-    y: y2 * fit,
+    x: (x2 + RING_OFFSET.x) * fit,
+    y: (y2 + RING_OFFSET.y) * fit,
     z: z1 * fit,
     roll: scene.roll,
     tilt: scene.tilt,

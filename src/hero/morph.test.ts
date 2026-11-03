@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rad } from "../math";
 import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose, reelScene } from "../ring/reel-ring";
-import { CARD_COUNT, CARD_H, CARD_W, mixPose, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
+import { CARD_COUNT, CARD_H, CARD_W, RING_OFFSET, mixPose, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
 
 // A tiny CSS transform model: 4x4 matrices, y pointing down, applied right to left.
 type M = number[][];
@@ -29,7 +29,7 @@ describe("ringIntroPose", () => {
       for (const formation of [0.2, 0.6, 1]) {
         const a = k * 22.5;
         const p = reelPose(a, formation, scene);
-        const ring = chain(RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
+        const ring = chain(T(RING_OFFSET.x, RING_OFFSET.y, 0), RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
         expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, formation, 1).pose), CARD_W, CARD_H);
       }
     }

@@ -36,7 +36,7 @@ function rowLayout(w: number, h: number): StripLayout {
 
 /** How big the intro ring can be in this frame. */
 function ringFit(w: number, h: number) {
-  return Math.max(0.45, Math.min(1, (h / 2 - 80) / 351, w / 820));
+  return Math.max(0.45, Math.min(0.88, (h / 2 - 80) / 400, w / 900));
 }
 
 /**
