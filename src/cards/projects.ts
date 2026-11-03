@@ -158,6 +158,28 @@ function orientalStudio(): Script {
   ];
 }
 
+function recall(): Script {
+  // The benchmark lines are the real output from the run in the README.
+  return [
+    "$ §redis-cli",
+    "127.0.0.1:6379> §SET city Chicago EX 60",
+    "OK",
+    "127.0.0.1:6379> §GET city",
+    '"Chicago"',
+    "127.0.0.1:6379> §INCR visits",
+    "(integer) 1",
+    "127.0.0.1:6379> §TTL city",
+    "(integer) 58",
+    "127.0.0.1:6379> §quit",
+    "",
+    "$ §recall-bench -n 2000000 -P 16 -q -t set,get,incr",
+    "SET:        1374834 requests/sec   p50=0.435 ms   p99=2.206 ms",
+    "GET:        1228259 requests/sec   p50=0.486 ms   p99=2.525 ms",
+    "INCR:       1225094 requests/sec   p50=0.520 ms   p99=2.383 ms",
+    "",
+  ];
+}
+
 export function buildProjects(): Project[] {
   return [
     {
@@ -171,6 +193,17 @@ export function buildProjects(): Project[] {
       cover: "/covers/chicago-sky-tracker.png",
       accent: "#38bdf8",
       preview: { kind: "drift", image: "/covers/chicago-sky-tracker.png" },
+    },
+    {
+      id: "recall",
+      name: "Recall",
+      blurb: "A Redis-compatible database built from scratch, with 2.8× faster writes after profiling.",
+      lang: "Go",
+      stack: "TCP · RESP protocol · pprof",
+      repo: GH + "Recall",
+      cover: coverUrl("recall"),
+      accent: "#e879f9",
+      preview: { kind: "terminal", script: recall() },
     },
     {
       id: "footprint",

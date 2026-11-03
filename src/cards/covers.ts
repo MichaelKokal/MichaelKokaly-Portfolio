@@ -176,7 +176,38 @@ const orientalStudio = () => {
   );
 };
 
+const recall = () => {
+  // The keyspace as its 256 shards, a few busy at once, over the before/after throughput bars.
+  const cell = 26, gap = 3, x0 = 40, y0 = 150;
+  let shards = "";
+  for (let i = 0; i < 256; i++) {
+    let h = Math.imul(i ^ 0x9e3779b9, 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    const heat = ((h ^ (h >>> 16)) >>> 0) % 100;
+    const x = x0 + (i % 16) * (cell + gap), y = y0 + Math.floor(i / 16) * (cell + gap);
+    const fill = heat > 82 ? "#e879f9" : heat > 55 ? "#7e3a8a" : "#2a1838";
+    shards += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="5" fill="${fill}"/>`;
+  }
+  // SET and INCR: requests/sec before and after the rewrite, in thousands.
+  const pairs = [[452, 1287], [379, 1253]];
+  const bars = pairs.map(([before, after], i) => {
+    const x = 112 + i * 200, base = 880, scale = 190 / 1287;
+    return `<rect x="${x}" y="${base - before * scale}" width="56" height="${before * scale}" rx="6" fill="#4b3a57"/>
+       <rect x="${x + 66}" y="${base - after * scale}" width="56" height="${after * scale}" rx="6" fill="#e879f9"/>`;
+  }).join("");
+  return wrap(
+    `<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c0f26"/><stop offset="1" stop-color="#08040c"/></linearGradient>
+     <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#e879f9" stop-opacity=".28"/><stop offset="1" stop-color="#e879f9" stop-opacity="0"/></radialGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bg)"/>
+     <circle cx="270" cy="380" r="300" fill="url(#glow)"/>
+     ${shards}
+     ${bars}
+     <path d="M50 884 L490 884" stroke="#4b3a57" stroke-width="2"/>`,
+  );
+};
+
 export const COVERS = {
+  recall,
   orientalStudio,
   quiz,
   redlight,
