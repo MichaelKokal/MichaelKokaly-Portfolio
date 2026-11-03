@@ -679,3 +679,8 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .frame, .nav, .headline > *, .bar-about, .about, .about-panel, .wordmark-roll { transition: none; }
 }
+
+/* Links open from script (no href), so give them the hand cursor back. */
+a[role="link"] {
+  cursor: pointer;
+}

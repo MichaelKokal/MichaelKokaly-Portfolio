@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { OutLink } from "../OutLink";
 
 type Props = { open: boolean; onClose(): void };
 
@@ -51,15 +52,15 @@ export function About({ open, onClose }: Props) {
           ))}
         </dl>
         <div className="about-links">
-          <a href="https://github.com/MichaelKokal" target="_blank" rel="noreferrer" tabIndex={open ? 0 : -1}>
+          <OutLink to="https://github.com/MichaelKokal" tabIndex={open ? 0 : -1}>
             GitHub ↗
-          </a>
-          <a href="https://www.linkedin.com/in/michael-kokaly" target="_blank" rel="noreferrer" tabIndex={open ? 0 : -1}>
+          </OutLink>
+          <OutLink to="https://www.linkedin.com/in/michael-kokaly" tabIndex={open ? 0 : -1}>
             LinkedIn ↗
-          </a>
-          <a href="/Michael-Kokaly-Resume.pdf" target="_blank" rel="noreferrer" tabIndex={open ? 0 : -1}>
+          </OutLink>
+          <OutLink to="/Michael-Kokaly-Resume.pdf" tabIndex={open ? 0 : -1}>
             Resume ↗
-          </a>
+          </OutLink>
         </div>
       </section>
     </div>

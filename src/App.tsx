@@ -5,6 +5,7 @@ import { buildProjects, projectAssets, withPlainCovers, type Project } from "./c
 import { Loader } from "./loader/Loader";
 import { useEntrance } from "./loader/useEntrance";
 import { PortfolioHero } from "./hero/PortfolioHero";
+import { OutLink } from "./OutLink";
 
 const BRAND = "Michael Kokaly";
 
@@ -52,15 +53,15 @@ export function App() {
           </span>
         </span>
         <nav className="nav">
-          <a className="nav-link" href="https://github.com/MichaelKokal" target="_blank" rel="noreferrer">
+          <OutLink className="nav-link" to="https://github.com/MichaelKokal">
             GitHub ↗
-          </a>
-          <a className="nav-link" href="https://www.linkedin.com/in/michael-kokaly" target="_blank" rel="noreferrer">
+          </OutLink>
+          <OutLink className="nav-link" to="https://www.linkedin.com/in/michael-kokaly">
             LinkedIn ↗
-          </a>
-          <a className="nav-link" href="/Michael-Kokaly-Resume.pdf" target="_blank" rel="noreferrer">
+          </OutLink>
+          <OutLink className="nav-link" to="/Michael-Kokaly-Resume.pdf">
             Resume ↗
-          </a>
+          </OutLink>
         </nav>
       </header>
 
@@ -79,7 +80,7 @@ export function App() {
           <div className="bar-title">
             <h1>
               Things{" "}
-              <a ref={aboutLink} className="bar-about" href="#about" tabIndex={home ? 0 : -1}>
+              <a ref={aboutLink} className="bar-about" role="link" tabIndex={home ? 0 : -1} onClick={() => (location.hash = "about")} onKeyDown={(e) => e.key === "Enter" && (location.hash = "about")}>
                 I&apos;ve
               </a>{" "}
               <em>built.</em>

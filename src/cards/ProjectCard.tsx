@@ -1,4 +1,5 @@
 import { memo, useLayoutEffect, useRef } from "react";
+import { OutLink } from "../OutLink";
 import { mountPreview, type PreviewCtl } from "./preview";
 import type { Project } from "./projects";
 
@@ -40,11 +41,9 @@ export const ProjectCard = memo(function ProjectCard({ project, number, slot, on
     >
       <div className="pcard-face pcard-front">
         {/* First, so Tab reaches the card before its Live demo button. */}
-        <a
+        <OutLink
           className="pcard-link"
-          href={project.repo}
-          target="_blank"
-          rel="noreferrer"
+          to={project.repo}
           draggable={false}
           aria-label={`${project.name}. ${project.blurb} Built with ${project.lang}, ${project.stack}. Opens on GitHub.`}
         />
@@ -62,16 +61,14 @@ export const ProjectCard = memo(function ProjectCard({ project, number, slot, on
           <div className="pcard-actions">
             <span className="pcard-cta">View on GitHub ↗</span>
             {project.live ? (
-              <a
+              <OutLink
                 className="pcard-cta pcard-demo"
-                href={project.live}
-                target="_blank"
-                rel="noreferrer"
+                to={project.live}
                 draggable={false}
                 aria-label={`${project.name} live demo`}
               >
                 Live demo ↗
-              </a>
+              </OutLink>
             ) : null}
           </div>
         </div>
