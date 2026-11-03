@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { rad } from "../math";
 import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose, reelScene } from "../ring/reel-ring";
-import { CARD_COUNT, CARD_H, CARD_W, RING_OFFSET, mixPose, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
+import { CARD_COUNT, CARD_H, CARD_W, DECK_LAND, DECK_REST, MAX_RING, RING_OFFSET, deckPose, mixPose, ringCount, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
 
 // A tiny CSS transform model: 4x4 matrices, y pointing down, applied right to left.
 type M = number[][];
@@ -23,16 +23,66 @@ function expectSameCorners(a: M, aw: number, ah: number, b: M, bw: number, bh: n
 }
 
 describe("ringIntroPose", () => {
-  it("puts each card exactly where the ring hero drew it", () => {
+  it("ends with each card exactly where the ring hero draws it", () => {
     const scene = reelScene(0);
-    for (const k of [-8, -3, 0, 2, 7]) {
-      for (const formation of [0.2, 0.6, 1]) {
-        const a = k * 22.5;
-        const p = reelPose(a, formation, scene);
+    for (const slots of [12, 16]) {
+      for (const k of [-slots / 2, -3, 0, 2, slots / 2 - 1]) {
+        const a = k * (360 / slots);
+        const p = reelPose(a, 1, scene);
         const ring = chain(T(RING_OFFSET.x, RING_OFFSET.y, 0), RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
-        expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, formation, 1).pose), CARD_W, CARD_H);
+        expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, slots, 1, 1).pose), CARD_W, CARD_H);
       }
     }
+  });
+
+  const slots = 12;
+  const ks = Array.from({ length: slots }, (_, i) => i - slots / 2);
+  const rested = DECK_LAND + DECK_REST / 2;
+
+  it("stacks one card per slot into a deck before dealing", () => {
+    const poses = ks.map((k) => ringIntroPose(k, slots, rested, 1));
+    expect(poses.every((p) => p.visible)).toBe(true);
+    // Every card sits at its own height in the deck, each in front of the one below.
+    const zs = poses.map((p) => p.pose.z).sort((a, b) => a - b);
+    zs.slice(1).forEach((z, i) => expect(z - zs[i]).toBeGreaterThanOrEqual(5));
+    // Each matches one level of the deck.
+    const levels = Array.from({ length: slots }, (_, l) => deckPose(l, slots, 1));
+    for (const p of poses) expect(levels.some((d) => d.z === p.pose.z && d.y === p.pose.y)).toBe(true);
+  });
+
+  it("builds the deck from the bottom up", () => {
+    const shown = (f: number) => ks.filter((k) => ringIntroPose(k, slots, f, 1).visible).length;
+    expect(shown(0)).toBe(0);
+    let last = 0;
+    for (let f = 0.01; f <= DECK_LAND; f += 0.01) {
+      expect(shown(f)).toBeGreaterThanOrEqual(last);
+      last = shown(f);
+    }
+    expect(last).toBe(slots);
+    // The first card down is the bottom one, furthest back.
+    const first = ks.find((k) => ringIntroPose(k, slots, 0.001, 1).visible)!;
+    expect(ringIntroPose(first, slots, rested, 1).pose.z).toBe(0);
+  });
+
+  it("always deals the top card of the deck next", () => {
+    const top = deckPose(0, slots, 1);
+    for (let f = DECK_LAND + DECK_REST; f < 1; f += 0.02) {
+      const onDeck = ks.map((k) => ringIntroPose(k, slots, f, 1).pose).filter((p) => p.yaw === -180 && p.tilt === 0);
+      // Whatever is left is the bottom of the deck: its highest card is the top one remaining.
+      const remaining = onDeck.length;
+      if (remaining === 0) continue;
+      const highest = Math.max(...onDeck.map((p) => p.z));
+      expect(highest).toBe(deckPose(slots - remaining, slots, 1).z);
+      expect(highest).toBeLessThanOrEqual(top.z);
+    }
+  });
+});
+
+describe("ringCount", () => {
+  it("gives the ring one card per project, within limits", () => {
+    expect(ringCount(12)).toBe(12);
+    expect(ringCount(0)).toBe(1);
+    expect(ringCount(100)).toBe(MAX_RING);
   });
 });
 
@@ -56,7 +106,7 @@ describe("ringSlotOf", () => {
 
 describe("mixPose", () => {
   it("starts on the ring and ends in the row", () => {
-    const a = ringIntroPose(3, 1, 1).pose, b = stripPose(31, 0, { w: 1440, h: 900, top: 92, bottom: 190 }).pose;
+    const a = ringIntroPose(3, 16, 1, 1).pose, b = stripPose(31, 0, { w: 1440, h: 900, top: 92, bottom: 190 }).pose;
     expect(mixPose(a, b, 0)).toEqual(a);
     const end = mixPose(a, b, 1);
     for (const key of Object.keys(b) as (keyof CardPose)[]) expect(end[key]).toBeCloseTo(b[key]);

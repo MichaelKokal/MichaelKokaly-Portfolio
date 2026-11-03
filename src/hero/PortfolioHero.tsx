@@ -5,7 +5,7 @@ import type { PreviewCtl } from "../cards/preview";
 import type { Project } from "../cards/projects";
 import { attachGestures, createWriter, hitSlot } from "../cards/runtime";
 import { nearestAngle, recycledIndex } from "../math";
-import { CARD_COUNT, mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePerspective, stripMetrics, stripPose, type StripLayout } from "./morph";
+import { CARD_COUNT, mixPose, poseTransform, ringCount, ringIntroPose, ringSlotOf, scenePerspective, stripMetrics, stripPose, type StripLayout } from "./morph";
 
 type Props = {
   projects: Project[];
@@ -22,7 +22,6 @@ const SPEED = 38;
 
 const STEP = 360 / CARD_COUNT;
 const cards = Array.from({ length: CARD_COUNT }, (_, i) => i);
-const ringSlots = cards.map((i) => ringSlotOf(i));
 
 /** The project that lands in the middle when the intro ends. */
 const MIDDLE = "oriental";
@@ -40,8 +39,8 @@ function ringFit(w: number, h: number) {
 }
 
 /**
- * The intro is the ring: cards are dealt round a small tilted ring while the
- * page loads. The reveal then carries each card to its place in a row of big,
+ * The intro is a deck of cards, one per project, that is then dealt round a
+ * small tilted ring while the page loads. The reveal then carries each card to its place in a row of big,
  * flat cards that slides slowly to the right and answers to drag, swipe and
  * scroll.
  */
@@ -84,6 +83,9 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
 
     let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0;
     let pxToStep = STEP / 300;
+    // One ring card per project, so every project is dealt exactly once.
+    const slots = ringCount(n);
+    const ringSlots = cards.map((i) => ringSlotOf(i, slots));
 
     const { pointer, detach } = attachGestures(
       el,
@@ -142,12 +144,9 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
           // Cards that sit the ring out join only once the rest are nearly settled.
           visible = rest.visible && m > 0.95;
         } else {
-          const ring = ringIntroPose(k, form, fit);
-          visible = ring.appear > 0;
-          // Only the very first card fades in, from the white page. Every card after
-          // it is dealt solid: cards fading on their own schedules overlapped as
-          // light and dark stripes that flickered as they moved.
-          appear = Math.min(1, form / 0.05);
+          const ring = ringIntroPose(k, slots, form, fit);
+          visible = ring.visible;
+          appear = ring.fade;
           pose = mixPose(ring.pose, rest.pose, m);
         }
 
