@@ -24,6 +24,9 @@ const STEP = 360 / CARD_COUNT;
 const cards = Array.from({ length: CARD_COUNT }, (_, i) => i);
 const ringSlots = cards.map((i) => ringSlotOf(i));
 
+/** The project that lands in the middle when the intro ends. */
+const MIDDLE = "oriental";
+
 /** The space the row keeps clear for the header and the bar below it. */
 function rowLayout(w: number, h: number): StripLayout {
   // Phones need more room below, because the bar stacks onto more lines.
@@ -45,7 +48,11 @@ function ringFit(w: number, h: number) {
 export function PortfolioHero({ projects, formation, expansion, interactive, reduced }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const n = projects.length;
-  const [reels, setReels] = useState(() => cards.map((i) => recycledIndex(i, CARD_COUNT, i * STEP, n)));
+  // Shift the whole list so MIDDLE sits on the middle card, keeping the order.
+  const shift = Math.max(0, projects.findIndex((p) => p.id === MIDDLE));
+  const shiftRef = useRef(shift);
+  shiftRef.current = shift;
+  const [reels, setReels] = useState(() => cards.map((i) => (recycledIndex(i, CARD_COUNT, i * STEP, n) + shift) % n));
   const reelsRef = useRef(reels);
   const els = useRef<(HTMLElement | null)[]>([]);
   const ctls = useRef<(PreviewCtl | null)[]>([]);
@@ -151,7 +158,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
           write.style(card, "--appear", String(Math.round(appear * 100) / 100));
         } else if (!rest.visible && (m >= 1 || k === null)) {
           // Off screen: safe to swap which project this card shows.
-          const want = recycledIndex(i, CARD_COUNT, i * STEP - spin.current, n);
+          const want = (recycledIndex(i, CARD_COUNT, i * STEP - spin.current, n) + shiftRef.current) % n;
           if (want !== reelsRef.current[i]) (swapped ??= [...reelsRef.current])[i] = want;
         }
         write.attr(card, "data-hover", i === hovered ? "" : null);
