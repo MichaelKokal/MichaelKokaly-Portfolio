@@ -206,6 +206,18 @@ export function buildProjects(): Project[] {
       preview: { kind: "terminal", script: recall() },
     },
     {
+      id: "momentum",
+      name: "MOMENTUM",
+      blurb: "A daily tracker for workouts, tasks, water and food, with 13,000+ USDA foods for calories and macros.",
+      lang: "JavaScript",
+      stack: "HTML · CSS · USDA FoodData Central",
+      repo: GH + "MOMENTUM",
+      live: "https://michaelkokal.github.io/MOMENTUM/",
+      cover: "/covers/momentum.png",
+      accent: "#7088ff",
+      preview: { kind: "drift", image: "/covers/momentum.png" },
+    },
+    {
       id: "footprint",
       name: "Digital Footprint",
       blurb: "A 3D globe where you pin photos and videos to the places they happened.",
