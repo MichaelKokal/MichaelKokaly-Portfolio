@@ -1,5 +1,4 @@
-import { lerp, mod, rad, wrap180 } from "../math";
-import { CARD_W as RING_CARD_W, REEL_SLOTS, reelPose, reelScene } from "../ring/reel-ring";
+import { clamp01, lerp, mod, rad, wrap180 } from "../math";
 
 /** How many cards there are. Fewer projects than this just repeat. */
 export const CARD_COUNT = 34;
@@ -23,8 +22,29 @@ export type CardPose = {
   scale: number;
 };
 
-export const RING_PERSPECTIVE = 1000;
-export const ROW_PERSPECTIVE = 1800;
+const RING_PERSPECTIVE = 1000;
+const ROW_PERSPECTIVE = 1800;
+
+/* ---------- The intro ring ---------- */
+
+/** How many cards make the intro ring. */
+export const RING_SLOTS = 16;
+/** The ring, tilted back and rolled to a dutch angle. Its cards are drawn 270px wide. */
+export const RING = { radius: 460, tilt: -22, roll: -20, scale: 0.52, cardW: 270 };
+/** Share of the formation each card spends moving. The rest is stagger. */
+export const DEAL = 0.3;
+/** How deep the waiting stack is, front card to back. */
+const STACK_DEPTH = 80;
+
+/**
+ * Where the intro ring sits, from the middle of the screen. Its front card comes
+ * toward the camera and lands low and right, so the ring is lifted and nudged left
+ * to keep it on screen and clear of the loading counter.
+ */
+export const RING_OFFSET = { x: 0, y: -100 };
+
+const TILT_SIN = Math.sin(rad(RING.tilt)), TILT_COS = Math.cos(rad(RING.tilt));
+const ROLL_SIN = Math.sin(rad(RING.roll)), ROLL_COS = Math.cos(rad(RING.roll));
 
 /**
  * Which ring slot a card plays during the intro, or null if it sits the intro
@@ -34,40 +54,52 @@ export const ROW_PERSPECTIVE = 1800;
 export function ringSlotOf(i: number, count = CARD_COUNT): number | null {
   const offset = i <= count / 2 ? i : i - count; // signed distance from the middle card
   const k = 0 - offset; // the ring counts the other way round (and 0, not -0)
-  return k >= -REEL_SLOTS / 2 && k < REEL_SLOTS / 2 ? k : null;
+  return k >= -RING_SLOTS / 2 && k < RING_SLOTS / 2 ? k : null;
 }
 
 /**
- * Where the intro ring sits, from the middle of the screen. Its front card comes
- * toward the camera and lands low and right, so the ring is lifted and nudged left
- * to keep it on screen and clear of the loading counter.
+ * The deal, on the flat ring before its tilt. `angle` is the card's place on the
+ * ring: 0 is the far centre, ±180 is nearest the camera. Undealt cards wait at
+ * -180 (the front) and swing round to their place, each in its own slice of the
+ * formation.
  */
-export const RING_OFFSET = { x: 0, y: -100 };
+export function ringDeal(angle: number, formation: number) {
+  const around = mod(angle + 180, 360);
+  const order = around / 360;
+  const t = clamp01((formation - order * (1 - DEAL)) / DEAL);
+  const dealt = 1 - (1 - t) ** 3;
+  const yaw = -180 + around * dealt;
+  const r = rad(yaw);
+  // Waiting cards sit just inside each other so the stack reads as one card.
+  // About 5px apart: any closer and the browser cannot tell which overlapping
+  // card is in front, so their monograms flicker through each other.
+  const radius = RING.radius - (1 - dealt) * order * STACK_DEPTH;
+  return { x: -Math.sin(r) * radius, z: -Math.cos(r) * radius, yaw, appear: Math.min(1, t * 2.5) };
+}
 
 /** A card on the small tilted ring of the intro. */
 export function ringIntroPose(k: number, formation: number, fit: number) {
-  const scene = reelScene(0);
-  const a = mod(k * (360 / REEL_SLOTS) + 180, 360) - 180;
-  const p = reelPose(a, formation, scene);
-  const t = rad(scene.tilt), r = rad(scene.roll);
+  const p = ringDeal(wrap180(k * (360 / RING_SLOTS)), formation);
   // The ring's tilt, then the dutch-angle roll, applied to the card's position.
-  const y1 = -p.z * Math.sin(t);
-  const z1 = p.z * Math.cos(t);
-  const x2 = p.x * Math.cos(r) - y1 * Math.sin(r);
-  const y2 = p.x * Math.sin(r) + y1 * Math.cos(r);
+  const y1 = -p.z * TILT_SIN;
+  const z1 = p.z * TILT_COS;
+  const x2 = p.x * ROLL_COS - y1 * ROLL_SIN;
+  const y2 = p.x * ROLL_SIN + y1 * ROLL_COS;
   const pose: CardPose = {
     x: (x2 + RING_OFFSET.x) * fit,
     y: (y2 + RING_OFFSET.y) * fit,
     z: z1 * fit,
-    roll: scene.roll,
-    tilt: scene.tilt,
+    roll: RING.roll,
+    tilt: RING.tilt,
     spin: 0,
     yaw: p.yaw,
-    // Ring cards are 270px wide; the shared card is laid out smaller.
-    scale: p.scale * (RING_CARD_W / CARD_W) * fit,
+    // The shared card is laid out smaller than a ring card.
+    scale: RING.scale * (RING.cardW / CARD_W) * fit,
   };
   return { pose, appear: p.appear };
 }
+
+/* ---------- The row ---------- */
 
 export type StripLayout = {
   /** Frame size in px. */

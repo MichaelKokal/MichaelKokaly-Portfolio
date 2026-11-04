@@ -9,8 +9,7 @@ export type Script = string[];
 export type PreviewSpec =
   | { kind: "terminal"; script: Script }
   | { kind: "pan"; images: string[] }
-  | { kind: "drift"; image: string }
-  | { kind: "video"; src: string };
+  | { kind: "drift"; image: string };
 
 export type Project = {
   id: string;
@@ -190,9 +189,9 @@ export function buildProjects(): Project[] {
       stack: "Spring Boot · PostgreSQL · React",
       repo: GH + "Chicago-Sky-Tracker",
       live: "https://chicago-sky-tracker.canadacentral.cloudapp.azure.com",
-      cover: "/covers/chicago-sky-tracker.png",
+      cover: "/covers/chicago-sky-tracker.webp",
       accent: "#38bdf8",
-      preview: { kind: "drift", image: "/covers/chicago-sky-tracker.png" },
+      preview: { kind: "drift", image: "/covers/chicago-sky-tracker.webp" },
     },
     {
       id: "recall",
@@ -213,9 +212,9 @@ export function buildProjects(): Project[] {
       stack: "HTML · CSS · USDA FoodData Central",
       repo: GH + "MOMENTUM",
       live: "https://michaelkokal.github.io/MOMENTUM/",
-      cover: "/covers/momentum.png",
+      cover: "/covers/momentum.webp",
       accent: "#7088ff",
-      preview: { kind: "drift", image: "/covers/momentum.png" },
+      preview: { kind: "drift", image: "/covers/momentum.webp" },
     },
     {
       id: "footprint",
@@ -225,9 +224,9 @@ export function buildProjects(): Project[] {
       stack: "React · Supabase · three-globe",
       repo: GH + "Digital-Footprint",
       live: "https://digital-footprint-murex.vercel.app",
-      cover: "/covers/digital-footprint.png",
+      cover: "/covers/digital-footprint.webp",
       accent: "#fb923c",
-      preview: { kind: "drift", image: "/covers/digital-footprint.png" },
+      preview: { kind: "drift", image: "/covers/digital-footprint.webp" },
     },
     {
       id: "haki",
@@ -237,9 +236,9 @@ export function buildProjects(): Project[] {
       stack: "Node · Express · Web Speech API",
       repo: GH + "Haki",
       live: "https://haki.michaelkokaly.com",
-      cover: "/covers/haki.png",
+      cover: "/covers/haki.webp",
       accent: "#4cc497",
-      preview: { kind: "drift", image: "/covers/haki.png" },
+      preview: { kind: "drift", image: "/covers/haki.webp" },
     },
     {
       id: "oriental",
@@ -261,7 +260,7 @@ export function buildProjects(): Project[] {
       repo: GH + "Who-Are-You-Between-the-Pages",
       cover: coverUrl("quiz"),
       accent: "#f5b82e",
-      preview: { kind: "pan", images: ["/covers/quiz-1.png", "/covers/quiz-2.png"] },
+      preview: { kind: "pan", images: ["/covers/quiz-1.webp", "/covers/quiz-2.webp"] },
     },
     {
       id: "redlight",
@@ -344,7 +343,6 @@ export function projectAssets(projects: Project[]) {
   for (const p of projects) {
     if (p.preview.kind === "pan") p.preview.images.forEach((i) => previews.add(i));
     if (p.preview.kind === "drift") previews.add(p.preview.image);
-    if (p.preview.kind === "video") previews.add(p.preview.src);
   }
   return { covers, previews: [...previews].filter((p) => !covers.includes(p)) };
 }

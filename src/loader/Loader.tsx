@@ -1,5 +1,5 @@
-import { animate, motion, useTransform } from "motion/react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { followOpacity } from "../anim";
 import { EXPANSION_EASE, HOME_AT_S, type Entrance } from "./useEntrance";
 
 type Props = { entrance: Entrance; wordmark: RefObject<HTMLElement | null>; brand: string };
@@ -7,26 +7,27 @@ type Props = { entrance: Entrance; wordmark: RefObject<HTMLElement | null>; bran
 /** The white loading page. The cards rise over it; it fades while they move. */
 export function Loader({ entrance, wordmark, brand }: Props) {
   const { stage, progress, expansion, home } = entrance;
-  const backdrop = useTransform(expansion, [0, 0.55], [1, 0]);
+  const backdrop = useRef<HTMLDivElement>(null);
   const brandEl = useRef<HTMLSpanElement>(null);
+
+  useLayoutEffect(() => followOpacity(backdrop.current!, expansion, [0, 0.55], [1, 0]), [expansion]);
 
   // The brand word flies into the header wordmark's real position and size.
   useEffect(() => {
     if (stage !== "revealing" || !brandEl.current || !wordmark.current) return;
     const from = brandEl.current.getBoundingClientRect();
     const to = wordmark.current.getBoundingClientRect();
-    const c = animate(
-      brandEl.current,
-      { x: to.left - from.left, y: to.top - from.top, scale: to.height / from.height },
-      { duration: HOME_AT_S, ease: EXPANSION_EASE },
+    const fly = brandEl.current.animate(
+      [{ transform: "none" }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.height / from.height})` }],
+      { duration: HOME_AT_S * 1000, easing: `cubic-bezier(${EXPANSION_EASE.join(", ")})`, fill: "forwards" },
     );
-    return () => c.stop();
+    return () => fly.cancel();
   }, [stage, wordmark]);
 
   const pct = Math.round(progress * 100);
   return (
     <>
-      <motion.div className="loader-backdrop" style={{ opacity: backdrop }} />
+      <div ref={backdrop} className="loader-backdrop" />
       <div className={`loader-ui ${stage === "loading" ? "" : "is-leaving"}`}>
         <span ref={brandEl} className="loader-brand" style={{ opacity: home ? 0 : 1 }}>
           {brand}

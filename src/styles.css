@@ -142,39 +142,6 @@ button { font: inherit; color: inherit; }
 .nav-link:hover { background: rgba(255, 255, 255, 0.6); }
 :is(.nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-.headline {
-  position: absolute;
-  left: calc(var(--inset) + clamp(20px, 4vw, 56px));
-  right: calc(var(--inset) + clamp(20px, 4vw, 56px));
-  bottom: calc(var(--inset) + clamp(22px, 5vh, 52px));
-  z-index: 3;
-  max-width: 560px;
-  pointer-events: none;
-}
-.headline h1 {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: clamp(44px, 7.2vw, 104px);
-  line-height: 0.92;
-  letter-spacing: -0.02em;
-}
-.headline h1 em { font-style: italic; }
-.headline p {
-  margin: 14px 0 0;
-  max-width: 42ch;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-.headline > * {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 1s var(--ease), transform 1s var(--ease);
-}
-.page.is-home .headline > * { opacity: 1; transform: none; }
-.page.is-home .headline p { transition-delay: 0.12s; }
-
 /* ---------- Loader ---------- */
 
 .loader-backdrop {
@@ -272,18 +239,15 @@ button { font: inherit; color: inherit; }
 /* ---------- Cards ---------- */
 
 /* While the intro plays, keep each card's drawing as it moves instead of
-   redrawing it at every new size. It is drawn crisp again once the row settles. */
-.page.is-entering .pcard { will-change: transform; }
-/* Cards can't be clicked until the intro is over. */
-.page.is-entering .pcard { pointer-events: none; }
+   redrawing it at every new size (it is drawn crisp again once the row settles),
+   and don't let the cards be clicked yet. */
+.page.is-entering .pcard { will-change: transform; pointer-events: none; }
 .pcard {
-  --u: 1;
   position: absolute;
   left: 0;
   top: 0;
   transform-style: preserve-3d;
   color: #fff;
-  text-decoration: none;
   font-size: calc(16px * var(--u));
   -webkit-tap-highlight-color: transparent;
   visibility: hidden;
@@ -349,7 +313,7 @@ button { font: inherit; color: inherit; }
   background: transparent;
 }
 .preview[data-playing] { opacity: 1; }
-.preview video, .preview .drift { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.preview .drift { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .preview:not([data-run]) * { animation-play-state: paused !important; }
 
 .pcard-shade {
@@ -368,11 +332,13 @@ button { font: inherit; color: inherit; }
   font-size: 0.72em;
   font-weight: 600;
 }
+/* No backdrop blur on anything inside a card: the cards move every frame, and a
+   blur behind a moving card is redrawn every frame. A slightly stronger tint
+   reads the same over the card's dark shading. */
 .pcard-lang, .pcard-live {
   padding: 0.35em 0.75em;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.2);
   letter-spacing: 0.02em;
 }
 .pcard-live::before {
@@ -419,11 +385,9 @@ button { font: inherit; color: inherit; }
 .pcard-demo {
   position: relative;
   z-index: 4;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-  text-decoration: none;
-  backdrop-filter: blur(6px);
   transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease, color 0.2s ease;
 }
 .pcard-demo::before {
@@ -503,11 +467,13 @@ button { font: inherit; color: inherit; }
 /* ---------- Bar under the cards ---------- */
 
 /* A frosted-glass bar with the headline, project count and languages. */
-.headline.headline-bar {
+.headline {
+  position: absolute;
   left: calc(var(--inset) + 18px);
   right: calc(var(--inset) + 18px);
   bottom: calc(var(--inset) + 18px);
-  max-width: none;
+  z-index: 3;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -526,10 +492,20 @@ button { font: inherit; color: inherit; }
   transform: translateY(24px);
   transition: opacity 1s var(--ease), transform 1s var(--ease);
 }
-.page.is-home .headline.headline-bar { opacity: 1; transform: none; }
-.headline-bar > * { transform: none; }
-.headline-bar h1 { font-size: clamp(34px, 3.6vw, 52px); line-height: 1; white-space: nowrap; }
-.headline-bar p { margin: 8px 0 0; max-width: 58ch; font-size: 14px; line-height: 1.45; }
+/* The text fades in a little behind the bar itself. */
+.headline > * { opacity: 0; transition: opacity 1s var(--ease); }
+.page.is-home :is(.headline, .headline > *) { opacity: 1; transform: none; }
+.headline h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(34px, 3.6vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.headline h1 em { font-style: italic; }
+.headline p { margin: 8px 0 0; max-width: 58ch; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
 /* "built" opens the About me panel. A blue underline that fills in like a highlighter on hover. */
 .bar-about {
   --blue: #2b5fd9;
@@ -571,9 +547,8 @@ button { font: inherit; color: inherit; }
 }
 @media (max-width: 1100px) { .bar-langs { display: none; } }
 @media (max-width: 720px) {
-  .headline.headline-bar { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 18px; left: calc(var(--inset) + 10px); right: calc(var(--inset) + 10px); bottom: calc(var(--inset) + 10px); }
-  .headline-bar h1 { font-size: 32px; }
-  .headline-bar p { font-size: 13px; }
+  .headline { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 18px; left: calc(var(--inset) + 10px); right: calc(var(--inset) + 10px); bottom: calc(var(--inset) + 10px); }
+  .headline h1 { font-size: 32px; }
   .bar-count { padding-right: 16px; }
   .bar-count strong { font-size: 34px; }
 }
@@ -602,9 +577,8 @@ button { font: inherit; color: inherit; }
   overflow-y: auto;
   padding: 34px 36px 30px;
   border-radius: 24px;
-  background: rgba(255, 252, 246, 0.97);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  /* Solid, so the cards can't show through, with no blur to redraw behind it. */
+  background: #fffcf6;
   box-shadow: 0 30px 80px rgba(60, 34, 10, 0.3);
   transform: translateY(24px);
   transition: transform 0.5s var(--ease);
@@ -673,11 +647,10 @@ button { font: inherit; color: inherit; }
   .loader-brand { font-size: 40px; left: 20px; top: 24px; }
   .loader-progress { right: 18px; bottom: 18px; }
   .loader-skip { left: 18px; bottom: 24px; }
-  .headline p { font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .frame, .nav, .headline > *, .bar-about, .about, .about-panel, .wordmark-roll { transition: none; }
+  .frame, .nav, .headline, .headline > *, .bar-about, .about, .about-panel, .wordmark-roll { transition: none; }
 }
 
 /* Links open from script (no href), so give them the hand cursor back. */

@@ -6,11 +6,6 @@ export const rad = (deg: number) => (deg * Math.PI) / 180;
 /** Wrap any angle into -180..180. */
 export const wrap180 = (deg: number) => mod(deg + 180, 360) - 180;
 
-/** Where t sits between a and b, clamped to 0..1. */
-export const span = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
-
-export const outCubic = (t: number) => 1 - (1 - t) ** 3;
-
 /** The angle equal to `target` (mod 360) that is closest to `current`. */
 export const nearestAngle = (current: number, target: number) =>
   current + wrap180(target - current);

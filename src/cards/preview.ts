@@ -15,8 +15,6 @@ export function mountPreview(host: HTMLElement, spec: PreviewSpec): PreviewCtl {
   const shown = () => host.setAttribute("data-playing", "");
   const hidden = () => host.removeAttribute("data-playing");
   switch (spec.kind) {
-    case "video":
-      return video(host, spec.src, shown, hidden);
     case "terminal":
       return terminal(host, spec.script, shown, hidden);
     case "pan":
@@ -26,37 +24,9 @@ export function mountPreview(host: HTMLElement, spec: PreviewSpec): PreviewCtl {
   }
 }
 
-function video(host: HTMLElement, src: string, shown: () => void, hidden: () => void): PreviewCtl {
-  const v = document.createElement("video");
-  Object.assign(v, { muted: true, loop: true, playsInline: true, preload: "none", src });
-  v.setAttribute("muted", "");
-  v.addEventListener("playing", shown);
-  host.append(v);
-  let on = false;
-  return {
-    play() {
-      if (on) return;
-      on = true;
-      v.play().catch(() => (on = false));
-    },
-    pause() {
-      if (!on) return;
-      on = false;
-      v.pause();
-      hidden();
-    },
-    destroy() {
-      v.pause();
-      v.removeAttribute("src");
-      v.load();
-    },
-  };
-}
-
 /** CSS-animated previews: running is just animation-play-state. */
-function css(host: HTMLElement, nodes: Element[], shown: () => void, hidden: () => void): PreviewCtl {
-  host.append(...nodes);
-  const images = nodes.flatMap((n) => (n instanceof HTMLImageElement ? [n] : [...n.querySelectorAll("img")]));
+function css(host: HTMLElement, images: HTMLImageElement[], shown: () => void, hidden: () => void): PreviewCtl {
+  host.append(...images);
   let on = false, started = false, dead = false;
   return {
     play() {
@@ -104,12 +74,16 @@ function terminal(host: HTMLElement, script: Script, shown: () => void, hidden: 
   let index = 0, typed = 0, wait = 0, typing = false;
   let timer = 0;
 
-  const step = () => {
-    if (wait > 0) return void wait--;
+  /** Advances one tick. Returns false when the text didn't change. */
+  const step = (): boolean => {
+    if (wait > 0) {
+      wait--;
+      return false;
+    }
     if (index >= script.length) {
       lines = [];
       index = 0;
-      return;
+      return true;
     }
     const line = script[index];
     const cut = line.indexOf("§");
@@ -117,14 +91,14 @@ function terminal(host: HTMLElement, script: Script, shown: () => void, hidden: 
       lines.push(esc(line));
       index++;
       wait = line === "" ? 3 : 0;
-      return;
+      return true;
     }
     const answer = line.slice(cut + 1);
     if (!typing) {
       lines.push(esc(line.slice(0, cut)));
       typing = true;
       wait = 6;
-      return;
+      return true;
     }
     typed++;
     lines[lines.length - 1] = esc(line.slice(0, cut)) + `<b>${esc(answer.slice(0, typed))}</b>`;
@@ -134,6 +108,7 @@ function terminal(host: HTMLElement, script: Script, shown: () => void, hidden: 
       index++;
       wait = 8;
     }
+    return true;
   };
   const render = () => {
     pre.innerHTML = lines.slice(-MAX_LINES).join("\n") + '<span class="caret"></span>';
@@ -147,10 +122,8 @@ function terminal(host: HTMLElement, script: Script, shown: () => void, hidden: 
   return {
     play() {
       if (timer) return;
-      timer = window.setInterval(() => {
-        step();
-        render();
-      }, 55);
+      // Redraw only when text changed: each redraw repaints the whole card.
+      timer = window.setInterval(() => step() && render(), 55);
       host.setAttribute("data-run", "");
       requestAnimationFrame(shown);
     },

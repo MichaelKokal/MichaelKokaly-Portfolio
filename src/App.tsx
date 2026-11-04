@@ -1,5 +1,5 @@
-import { motion, useTransform, type MotionValue } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { followOpacity, type Value } from "./anim";
 import { About } from "./about/About";
 import { buildProjects, projectAssets, withPlainCovers, type Project } from "./cards/projects";
 import { Loader } from "./loader/Loader";
@@ -73,10 +73,11 @@ export function App() {
             formation={entrance.formation}
             expansion={expansion}
             interactive={stage === "done"}
+            paused={about && stage === "done"}
             reduced={entrance.reduced}
           />
         )}
-        <section className="headline headline-bar" aria-hidden={!home}>
+        <section className="headline" aria-hidden={!home}>
           <div className="bar-title">
             <h1>
               Things{" "}
@@ -131,8 +132,9 @@ const GRAIN = (() => {
   }
 })();
 
-function Sky({ expansion }: { expansion: MotionValue<number> }) {
-  const opacity = useTransform(expansion, [0, 0.35], [0, 1]);
-  return <motion.div className="sky" style={{ opacity, "--grain": GRAIN } as never} aria-hidden="true" />;
+function Sky({ expansion }: { expansion: Value }) {
+  const el = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => followOpacity(el.current!, expansion, [0, 0.35], [0, 1]), [expansion]);
+  return <div ref={el} className="sky" style={{ "--grain": GRAIN } as CSSProperties} aria-hidden="true" />;
 }
 

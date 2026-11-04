@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { rad } from "../math";
-import { CARD_H as RING_CARD_H, CARD_W as RING_CARD_W, reelPose, reelScene } from "../ring/reel-ring";
-import { CARD_COUNT, CARD_H, CARD_W, RING_OFFSET, mixPose, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose } from "./morph";
+import { rad, recycledIndex, wrap180 } from "../math";
+import {
+  CARD_COUNT, CARD_H, CARD_W, DEAL, RING, RING_OFFSET, RING_SLOTS,
+  mixPose, ringDeal, ringIntroPose, ringSlotOf, stripMetrics, stripPose, type CardPose,
+} from "./morph";
+
+const slots = Array.from({ length: RING_SLOTS }, (_, i) => i);
+/** A ring slot's angle once the ring has turned by `angle`. */
+const slotAngle = (s: number, angle: number) => wrap180(s * (360 / RING_SLOTS) + angle);
 
 // A tiny CSS transform model: 4x4 matrices, y pointing down, applied right to left.
 type M = number[][];
@@ -22,15 +28,81 @@ function expectSameCorners(a: M, aw: number, ah: number, b: M, bw: number, bh: n
   ca.forEach((p, i) => p.forEach((v, j) => expect(v).toBeCloseTo(cb[i][j], 6)));
 }
 
+describe("ringDeal", () => {
+  it("puts every dealt card on one circle, facing the centre", () => {
+    for (const s of slots) {
+      const a = slotAngle(s, 17);
+      const p = ringDeal(a, 1);
+      expect(Math.hypot(p.x, p.z)).toBeCloseTo(RING.radius, 6);
+      expect(p.yaw).toBeCloseTo(a, 6);
+      expect(p.appear).toBe(1);
+    }
+  });
+
+  it("stacks every card at the front, hidden, before the deal", () => {
+    for (const s of slots) {
+      const p = ringDeal(slotAngle(s, 0), 0);
+      expect(p.yaw).toBeCloseTo(-180);
+      expect(p.x).toBeCloseTo(0);
+      expect(p.appear).toBe(0);
+    }
+  });
+
+  it("deals in order of angle, at a steady rate around the ring", () => {
+    // The formation at which a card finishes is linear in how far round it sits.
+    const finish = (around: number) => (around / 360) * (1 - DEAL) + DEAL;
+    for (const around of [45, 90, 180, 270, 350]) {
+      const angle = around - 180;
+      expect(ringDeal(angle, finish(around) - 0.01).yaw).toBeLessThan(angle);
+      expect(ringDeal(angle, finish(around)).yaw).toBeCloseTo(angle);
+    }
+  });
+
+  it("deals both halves of the ring over equal distances", () => {
+    // Mirrored cards end mirrored: the left half covers what the right half does.
+    for (const a of [22.5, 45, 90, 135, 157.5]) {
+      const right = ringDeal(-a, 1), left = ringDeal(a, 1);
+      expect(left.x).toBeCloseTo(-right.x);
+      expect(left.z).toBeCloseTo(right.z);
+    }
+  });
+
+  it("never moves a card backwards during the deal", () => {
+    for (const s of slots) {
+      const a = slotAngle(s, 0);
+      let last = -Infinity;
+      for (let f = 0; f <= 1; f += 0.01) {
+        const yaw = ringDeal(a, f).yaw;
+        expect(yaw).toBeGreaterThanOrEqual(last - 1e-9);
+        last = yaw;
+      }
+    }
+  });
+});
+
 describe("ringIntroPose", () => {
-  it("puts each card exactly where the ring hero drew it", () => {
-    const scene = reelScene(0);
+  it("puts each card exactly where a 270px ring card would be", () => {
+    // The ring was designed with 270 x 480 cards; the shared card is 180 x 320, scaled up to match.
+    const ringW = RING.cardW, ringH = (RING.cardW / 9) * 16;
     for (const k of [-8, -3, 0, 2, 7]) {
       for (const formation of [0.2, 0.6, 1]) {
-        const a = k * 22.5;
-        const p = reelPose(a, formation, scene);
-        const ring = chain(T(RING_OFFSET.x, RING_OFFSET.y, 0), RZ(scene.roll), RX(scene.tilt), T(p.x, p.y, p.z), RY(p.yaw), S(p.scale));
-        expectSameCorners(ring, RING_CARD_W, RING_CARD_H, unified(ringIntroPose(k, formation, 1).pose), CARD_W, CARD_H);
+        const p = ringDeal(k * 22.5, formation);
+        const ring = chain(T(RING_OFFSET.x, RING_OFFSET.y, 0), RZ(RING.roll), RX(RING.tilt), T(p.x, 0, p.z), RY(p.yaw), S(RING.scale));
+        expectSameCorners(ring, ringW, ringH, unified(ringIntroPose(k, formation, 1).pose), CARD_W, CARD_H);
+      }
+    }
+  });
+});
+
+describe("recycling", () => {
+  it("keeps neighbouring cards on neighbouring projects at any angle", () => {
+    const items = 9;
+    for (const angle of [0, 33, 400, -777]) {
+      const cards = slots
+        .map((s) => ({ a: slotAngle(s, angle), item: recycledIndex(s, RING_SLOTS, s * 22.5 + angle, items) }))
+        .sort((p, q) => p.a - q.a);
+      for (let i = 1; i < cards.length; i++) {
+        expect((cards[i].item - cards[i - 1].item + items) % items).toBe(1);
       }
     }
   });

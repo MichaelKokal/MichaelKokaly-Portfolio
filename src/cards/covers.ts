@@ -206,7 +206,7 @@ const recall = () => {
   );
 };
 
-export const COVERS = {
+const COVERS = {
   recall,
   orientalStudio,
   quiz,

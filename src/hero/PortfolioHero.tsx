@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MotionValue } from "motion/react";
+import type { Value } from "../anim";
 import { ProjectCard } from "../cards/ProjectCard";
 import type { PreviewCtl } from "../cards/preview";
 import type { Project } from "../cards/projects";
@@ -10,10 +10,12 @@ import { CARD_COUNT, mixPose, poseTransform, ringIntroPose, ringSlotOf, scenePer
 type Props = {
   projects: Project[];
   /** Deals the cards around the ring. */
-  formation: MotionValue<number>;
+  formation: Value;
   /** Carries every card from the ring to its place in the row. */
-  expansion: MotionValue<number>;
+  expansion: Value;
   interactive: boolean;
+  /** Something covers the row (the About me panel): hold it and its previews still. */
+  paused: boolean;
   reduced: boolean;
 };
 
@@ -45,7 +47,7 @@ function ringFit(w: number, h: number) {
  * flat cards that slides slowly to the right and answers to drag, swipe and
  * scroll.
  */
-export function PortfolioHero({ projects, formation, expansion, interactive, reduced }: Props) {
+export function PortfolioHero({ projects, formation, expansion, interactive, paused, reduced }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const n = projects.length;
   // Shift the whole list so MIDDLE sits on the middle card, keeping the order.
@@ -63,6 +65,8 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
   const spin = useRef(0);
   const live = useRef(interactive);
   live.current = interactive;
+  const held = useRef(paused);
+  held.current = paused;
 
   const onMount = useCallback((slot: number, el: HTMLElement | null, ctl: PreviewCtl | null) => {
     els.current[slot] = el;
@@ -113,8 +117,9 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
       pxToStep = STEP / stripPose(0, 0, row).pitch;
 
       // The row slides slowly to the right on its own, easing in as the cards land.
-      // It holds still under the pointer, so a moving card is easy to click.
-      if (!reduced && !pointer.dragging && hovered < 0) target.current -= SPEED * pxToStep * m * dt;
+      // It holds still under the pointer, so a moving card is easy to click, and
+      // under the About me panel, whose blur would otherwise redraw every frame.
+      if (!reduced && !held.current && !pointer.dragging && hovered < 0) target.current -= SPEED * pxToStep * m * dt;
       target.current += velocity * dt;
       velocity *= Math.exp(-dt * 3.2);
       // Exponential follow: the same feel at any frame rate.
@@ -165,7 +170,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, red
 
         // Previews wait until the row has settled, then start one at a time.
         // Starting several at once in the middle of the move made it stutter.
-        const play = !reduced && visible && m >= 1 && rest.inView;
+        const play = !reduced && !held.current && visible && m >= 1 && rest.inView;
         const ctl = ctls.current[i];
         if (ctl && play !== playing.current[i] && !(play && now - lastStart < 150)) {
           playing.current[i] = play;

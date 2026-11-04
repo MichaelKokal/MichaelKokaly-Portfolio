@@ -1,5 +1,5 @@
-import { animate, useMotionValue, type AnimationPlaybackControls } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cubicBezier, tween, value, type Playback } from "../anim";
 import { prefersReducedMotion } from "../cards/runtime";
 
 export type Stage = "loading" | "revealing" | "done";
@@ -7,6 +7,7 @@ export type Stage = "loading" | "revealing" | "done";
 export const FORMATION_S = 2.6;
 export const EXPANSION_S = 1.9;
 export const EXPANSION_EASE: [number, number, number, number] = [0.5, 0, 0.15, 1];
+const expansionEase = cubicBezier(...EXPANSION_EASE);
 /** Header, frame and headline start this far into the reveal, not after it. */
 export const HOME_AT_S = 1.05;
 
@@ -15,20 +16,9 @@ const decoded = new Map<string, Promise<void>>();
 function load(src: string): Promise<void> {
   let p = decoded.get(src);
   if (!p) {
-    if (/\.(mp4|webm)$/i.test(src)) {
-      p = new Promise<void>((done) => {
-        const v = document.createElement("video");
-        v.muted = true;
-        v.preload = "auto";
-        v.onloadeddata = v.onerror = () => done();
-        v.src = src;
-        setTimeout(done, 8000);
-      });
-    } else {
-      const img = new Image();
-      img.src = src;
-      p = img.decode().catch(() => {});
-    }
+    const img = new Image();
+    img.src = src;
+    p = img.decode().catch(() => {});
     decoded.set(src, p);
   }
   return p;
@@ -36,18 +26,18 @@ function load(src: string): Promise<void> {
 
 /**
  * The entrance: formation deals the cards while real assets load, expansion
- * opens the scene once both are done. Both heroes read these two numbers.
+ * opens the scene once both are done. The hero reads these two numbers.
+ * `assets` is null until the covers are ready to load; the loader waits at 0 until then.
  */
-/** `assets` is null until the covers are ready to load; the loader waits at 0 until then. */
 export function useEntrance(assets: { covers: string[]; previews: string[] } | null) {
-  const formation = useMotionValue(0);
-  const expansion = useMotionValue(0);
+  const [formation] = useState(() => value(0));
+  const [expansion] = useState(() => value(0));
   const [reduced] = useState(prefersReducedMotion);
   const [stage, setStage] = useState<Stage>(reduced ? "done" : "loading");
   const [home, setHome] = useState(reduced);
   const [progress, setProgress] = useState(0);
   const run = useRef(0);
-  const running = useRef<AnimationPlaybackControls[]>([]);
+  const running = useRef<Playback[]>([]);
   const homeTimer = useRef(0);
 
   const stop = () => {
@@ -94,7 +84,7 @@ export function useEntrance(assets: { covers: string[]; previews: string[] } | n
       if (!live() || !formed || !loaded) return;
       setStage("revealing");
       running.current.push(
-        animate(expansion, 1, { duration: EXPANSION_S, ease: EXPANSION_EASE, onComplete: () => live() && setStage("done") }),
+        tween(expansion, 1, { duration: EXPANSION_S, ease: expansionEase, onComplete: () => live() && setStage("done") }),
       );
       homeTimer.current = window.setTimeout(() => live() && setHome(true), HOME_AT_S * 1000);
     };
@@ -104,9 +94,8 @@ export function useEntrance(assets: { covers: string[]; previews: string[] } | n
     Promise.race([covers, timeout]).then(() => {
       if (!live()) return;
       running.current.push(
-        animate(formation, 1, {
+        tween(formation, 1, {
           duration: FORMATION_S,
-          ease: "linear",
           onComplete: () => {
             formed = true;
             reveal();
@@ -138,7 +127,7 @@ export function useEntrance(assets: { covers: string[]; previews: string[] } | n
     return () => window.removeEventListener("keydown", key);
   }, [stage, finish]);
 
-  return { formation, expansion, stage, home, progress, reduced, skip: finish, replay: start };
+  return { formation, expansion, stage, home, progress, reduced, skip: finish };
 }
 
 export type Entrance = ReturnType<typeof useEntrance>;
