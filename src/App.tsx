@@ -25,6 +25,15 @@ export function App() {
   const wordmark = useRef<HTMLSpanElement>(null);
   const aboutLink = useRef<HTMLAnchorElement>(null);
 
+  // Picking a language spotlights its projects in the row. Picking it again shows all.
+  const [language, setLanguage] = useState<string | null>(null);
+  const languages = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const p of drawn) count.set(p.lang, (count.get(p.lang) ?? 0) + 1);
+    return [...count];
+  }, [drawn]);
+  const shown = language ? languages.find(([l]) => l === language)![1] : drawn.length;
+
   // The About me panel follows #about, so the link can be shared and Back closes it.
   const [about, setAbout] = useState(() => location.hash === "#about");
   useEffect(() => {
@@ -74,6 +83,7 @@ export function App() {
             expansion={expansion}
             interactive={stage === "done"}
             paused={about && stage === "done"}
+            language={language}
             reduced={entrance.reduced}
           />
         )}
@@ -89,15 +99,39 @@ export function App() {
             <p>Full-stack web apps, data tools and games I&apos;ve built as a Computer Science student at UIC. Click any card to dive deeper.</p>
           </div>
           <div className="bar-meta">
-            <div className="bar-count">
-              <strong>{drawn.length}</strong>
-              <span>projects</span>
+            <div className="bar-count" aria-live="polite">
+              {/* Keyed so the number rolls in again each time it changes. */}
+              <strong key={shown}>{shown}</strong>
+              <span>
+                {language ? `${language} ` : ""}
+                {shown === 1 ? "project" : "projects"}
+              </span>
             </div>
-            <ul className="bar-langs" aria-label="Languages">
-              {[...new Set(drawn.map((p) => p.lang))].map((l) => (
-                <li key={l}>{l}</li>
-              ))}
-            </ul>
+            <div
+              className="bar-langs"
+              role="group"
+              aria-label="Show projects by language"
+              // A mouse wheel scrolls the chips sideways when they don't all fit.
+              onWheel={(e) => {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+              }}
+            >
+              {[["All", drawn.length] as const, ...languages].map(([l, n]) => {
+                const on = l === "All" ? language === null : language === l;
+                return (
+                  <button
+                    key={l}
+                    className="lang-chip"
+                    aria-pressed={on}
+                    tabIndex={home ? 0 : -1}
+                    onClick={() => setLanguage(l === "All" || on ? null : l)}
+                  >
+                    {l}
+                    <span className="lang-count">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
             <span className="bar-hint">
               <span aria-hidden="true">←</span> Drag to explore <span aria-hidden="true">→</span>
             </span>

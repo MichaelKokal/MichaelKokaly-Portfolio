@@ -16,8 +16,13 @@ type Props = {
   interactive: boolean;
   /** Something covers the row (the About me panel): hold it and its previews still. */
   paused: boolean;
+  /** Spotlight this language: other cards dim and the row glides to the nearest match. */
+  language: string | null;
   reduced: boolean;
 };
+
+/** How much a dimmed card shrinks. */
+const DIM_SHRINK = 0.07;
 
 /** How fast the row slides to the right on its own, in px per second. */
 const SPEED = 38;
@@ -47,7 +52,7 @@ function ringFit(w: number, h: number) {
  * flat cards that slides slowly to the right and answers to drag, swipe and
  * scroll.
  */
-export function PortfolioHero({ projects, formation, expansion, interactive, paused, reduced }: Props) {
+export function PortfolioHero({ projects, formation, expansion, interactive, paused, language, reduced }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const n = projects.length;
   // Shift the whole list so MIDDLE sits on the middle card, keeping the order.
@@ -67,6 +72,10 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
   live.current = interactive;
   const held = useRef(paused);
   held.current = paused;
+  const lang = useRef(language);
+  lang.current = language;
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
 
   const onMount = useCallback((slot: number, el: HTMLElement | null, ctl: PreviewCtl | null) => {
     els.current[slot] = el;
@@ -88,6 +97,11 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
 
     let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0;
     let pxToStep = STEP / 300;
+    let spotlit: string | null = null;
+    // How dimmed each card is, 0 to 1, eased toward its target.
+    const dim = cards.map(() => 0);
+    /** The project a slot shows at the row's current position. */
+    const projectAt = (i: number) => projectsRef.current[(recycledIndex(i, CARD_COUNT, i * STEP - spin.current, n) + shiftRef.current) % n];
 
     const { pointer, detach } = attachGestures(
       el,
@@ -120,6 +134,25 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
       // It holds still under the pointer, so a moving card is easy to click, and
       // under the About me panel, whose blur would otherwise redraw every frame.
       if (!reduced && !held.current && !pointer.dragging && hovered < 0) target.current -= SPEED * pxToStep * m * dt;
+
+      // A new language picked: glide the nearest matching card to the middle.
+      const picked = live.current ? lang.current : null;
+      if (picked !== spotlit) {
+        spotlit = picked;
+        if (picked) {
+          let to: number | null = null;
+          for (const i of cards) {
+            if (projectAt(i).lang !== picked) continue;
+            const a = nearestAngle(spin.current, i * STEP);
+            if (to === null || Math.abs(a - spin.current) < Math.abs(to - spin.current)) to = a;
+          }
+          if (to !== null) {
+            target.current = to;
+            velocity = 0;
+          }
+        }
+      }
+      const ease = reduced ? 1 : 1 - Math.exp(-dt * 8);
       target.current += velocity * dt;
       velocity *= Math.exp(-dt * 3.2);
       // Exponential follow: the same feel at any frame rate.
@@ -156,10 +189,17 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
           pose = mixPose(ring.pose, rest.pose, m);
         }
 
+        // Dim cards outside the spotlight. Off screen the change is instant, so a card
+        // never slides in still easing from what it showed before it was recycled.
+        const off = spotlit !== null && projectsRef.current[reelsRef.current[i]]?.lang !== spotlit;
+        dim[i] = visible ? dim[i] + ((off ? 1 : 0) - dim[i]) * ease : off ? 1 : 0;
+        if (Math.abs(dim[i] - (off ? 1 : 0)) < 0.002) dim[i] = off ? 1 : 0;
+        write.attr(card, "data-dim", off ? "" : null);
+
         // Hide, don't fade: hidden cards cost the compositor nothing.
         write.style(card, "visibility", visible ? "visible" : "hidden");
         if (visible) {
-          write.style(card, "transform", poseTransform({ ...pose, scale: pose.scale / cardSize }));
+          write.style(card, "transform", poseTransform({ ...pose, scale: (pose.scale / cardSize) * (1 - DIM_SHRINK * dim[i]) }));
           write.style(card, "--appear", String(Math.round(appear * 100) / 100));
         } else if (!rest.visible && (m >= 1 || k === null)) {
           // Off screen: safe to swap which project this card shows.
@@ -170,7 +210,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
 
         // Previews wait until the row has settled, then start one at a time.
         // Starting several at once in the middle of the move made it stutter.
-        const play = !reduced && !held.current && visible && m >= 1 && rest.inView;
+        const play = !reduced && !held.current && !off && visible && m >= 1 && rest.inView;
         const ctl = ctls.current[i];
         if (ctl && play !== playing.current[i] && !(play && now - lastStart < 150)) {
           playing.current[i] = play;
