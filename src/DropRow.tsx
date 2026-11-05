@@ -40,11 +40,13 @@ export function DropRow({ projects, numbers }: { projects: Project[]; numbers: n
       const vh = window.innerHeight;
       // 0 when the row's top is at the bottom of the screen, 1 when it reaches 35% down.
       const p = still ? 1 : clamp01((vh - r.top) / (vh * 0.65));
+      // On a phone the cards land in a straight 2 x 2 grid, so they fall straighter too.
+      const narrow = window.innerWidth < 720;
       cards.current.forEach((c, i) => {
         if (!c) return;
         const k = ease(clamp01((p - i * 0.07) / 0.72));
-        const f = FROM[i], t = TO[i];
-        const x = f.x * (1 - k);
+        const f = FROM[i], t = narrow ? { y: 0, rz: 0 } : TO[i];
+        const x = f.x * (narrow ? 0.3 : 1) * (1 - k);
         const y = f.y + (t.y - f.y) * k;
         const rx = f.rx * (1 - k);
         const rz = f.rz + (t.rz - f.rz) * k;

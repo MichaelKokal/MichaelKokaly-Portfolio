@@ -503,3 +503,31 @@ h2 { margin-top: 10px; font-family: var(--serif); font-size: clamp(40px, 6vw, 66
    the bar (say, under "13 projects") is never taken as being on a card. */
 .ring-hero .headline { pointer-events: auto; }
 .page:not(.is-home) .ring-hero .headline { pointer-events: none; }
+
+/* ---------- Phones ---------- */
+@media (max-width: 720px) {
+  /* The bar stacks on phones; it must size to its text, not to a desktop width. */
+  .headline { gap: 10px; padding: 14px 16px; }
+  .bar-title { flex: none; width: 100%; }
+  .bar-status { margin-bottom: 6px; font-size: 11px; }
+  .headline h1 { font-size: 26px; }
+  .headline p { margin-top: 6px; font-size: 13px; line-height: 1.45; }
+  .bar-meta { gap: 12px; }
+  .bar-count strong { font-size: 28px; }
+  .bar-count span { font-size: 11px; }
+
+  /* The featured cards land in a tidy 2 × 2 grid instead of a fan. */
+  .drop-row { display: grid; grid-template-columns: repeat(2, max-content); justify-content: center; gap: 16px; margin: 0 0 48px; }
+  .drop-card .loose { --s: 0.82 !important; }
+  .drop-shadow { display: none; }
+
+  .section { padding: 72px 0; }
+  .section-head { margin-bottom: 32px; }
+  .projects { gap: 20px; }
+  .project { gap: 24px; }
+  .project-meta { font-size: 13px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .project .shot { height: 440px; }
+  .more-head { margin-top: 64px; }
+  .contact .wrap { padding: 80px 18px 90px; }
+}
