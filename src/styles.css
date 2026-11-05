@@ -1,704 +1,505 @@
 :root {
   --ink: #1b1714;
-  --ink-soft: #4d453e;
+  --muted: #5a5047;
+  --faint: #6b6158;
+  --hairline: #ddd5c9;
   --paper: #efebe4;
-  --white: #ffffff;
-  --inset: 10px;
-  --radius: 22px;
-  --ease: cubic-bezier(0.5, 0, 0.15, 1);
+  --surface: #e7e1d7;
+  --card: #ffffff;
+  --accent: #0058b9;
+  --accent-deep: #003f86;
+  --accent-soft: rgba(0, 88, 185, 0.1);
+  --live: #17673a;
+  --live-soft: rgba(23, 103, 58, 0.12);
+  --shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 10px 30px rgba(60, 40, 20, 0.1);
+  --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --serif: "Instrument Serif", Georgia, serif;
-  --sans: Inter, system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 18px;
+  --wrap: 1120px;
+  --white: #ffffff;
+  --ease: cubic-bezier(0.5, 0, 0.15, 1);
   color-scheme: light;
 }
 
 * { box-sizing: border-box; }
-
-html, body, #root { height: 100%; }
-
+/* The scrollbar's space is kept even while the intro locks the page, so the page
+   doesn't get narrower (and the cards don't jump) when the scrollbar comes back. */
+html { scroll-behavior: smooth; scroll-padding-top: 80px; scrollbar-gutter: stable; }
 body {
   margin: 0;
-  overflow: hidden;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-
 button { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+a[role="link"] { cursor: pointer; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+img { display: block; max-width: 100%; }
+::selection { background: var(--accent); color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
 
-/* ---------- Frame ---------- */
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.dot { color: var(--faint); }
 
-/* The frame draws in by clipping its edges, not by resizing. Resizing re-laid
-   out the whole 3D scene on every frame of the reveal and made it stutter. The
-   clip is the same on every side, so the scene's centre never moves. */
-.frame {
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
-  isolation: isolate;
-  clip-path: inset(0 round 0);
-  transition: clip-path 1.2s var(--ease);
+.skip {
+  position: fixed; top: 10px; left: 10px; z-index: 100;
+  padding: 8px 14px; border-radius: 999px;
+  background: var(--ink); color: var(--paper); font-size: 14px;
+  transform: translateY(-200%); transition: transform 0.2s;
 }
-.page.is-home .frame { clip-path: inset(var(--inset) round var(--radius)); }
-/* While the entrance plays the cards rise over the white loader, not under it. */
-.page.is-entering .frame { z-index: 101; }
+.skip:focus { transform: none; }
 
-.sky {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  will-change: opacity;
+/* ---------- Reveal ---------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.reveal.is-in { opacity: 1; transform: none; }
+/* Nothing can be clicked or hovered while it is still fading in. */
+.reveal:not(.is-settled) { pointer-events: none; }
+/* The featured cards fall inside their own section and never show over the hero;
+   each one can be clicked only once it has landed. */
+#projects { overflow: clip; }
+.drop-card:not(.is-landed) { pointer-events: none; }
+
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 46px; padding: 0 22px; border-radius: 999px;
+  font-size: 16px; font-weight: 500;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #0071e3; color: #fff; }
+.btn-primary:hover { background: #0058b9; }
+.btn-ghost { border: 1px solid var(--hairline); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--ink); }
+/* ---------- Sections ---------- */
+.section { padding: 104px 0; border-top: 1px solid var(--hairline); }
+.section.alt { background: var(--surface); }
+.section-head { margin-bottom: 56px; }
+.eyebrow { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: 0.01em; }
+h2 { margin-top: 10px; font-family: var(--serif); font-size: clamp(40px, 6vw, 66px); line-height: 1; letter-spacing: -0.01em; font-weight: 400; }
+.section-sub { margin-top: 14px; max-width: 34em; font-size: 19px; color: var(--muted); }
+
+.chip { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.chip-live { background: var(--live-soft); color: var(--live); }
+
+/* ---------- Projects ---------- */
+.projects { display: grid; gap: 28px; }
+.project {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 44px;
+  padding: 40px; border-radius: 24px;
+  background: var(--surface);
+}
+.project:not(:has(.project-side)) { grid-template-columns: 1fr; }
+.project-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.project-index { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.project-name { font-weight: 600; color: var(--ink); }
+.project h3 { margin-top: 14px; font-family: var(--serif); font-size: clamp(30px, 3.4vw, 42px); line-height: 1.04; font-weight: 400; }
+.project-body { margin-top: 14px; color: var(--muted); font-size: 16px; line-height: 1.62; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 22px; }
+.tags li { padding: 4px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--hairline); font-size: 13px; color: var(--muted); }
+.project-links { display: flex; gap: 22px; margin-top: 22px; }
+.text-link { font-size: 15px; font-weight: 500; color: var(--accent); }
+.text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 1px;
+  margin: 24px 0 0; border-radius: 14px; overflow: hidden;
+  background: var(--hairline); border: 1px solid var(--hairline);
+}
+.stats div { display: flex; flex-direction: column-reverse; padding: 14px 14px 12px; background: var(--card); }
+.stats dd { margin: 0; white-space: nowrap; font-size: clamp(19px, 2vw, 24px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+.stats dt { margin-top: 4px; font-size: 12px; color: var(--faint); }
+
+.project-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+/* Screenshots are phone captures: a phone rises out of the bottom of a panel.
+   On hover it lifts all the way out and plays a short demo of the app. */
+.shot {
+  --rx: 0deg; --ry: 0deg;
+  position: relative; height: 436px; overflow: hidden;
+  border-radius: 14px; border: 1px solid var(--hairline);
   background:
-    radial-gradient(75% 55% at 50% 100%, rgba(255, 180, 110, 0.85), rgba(255, 180, 110, 0) 70%),
-    radial-gradient(55% 40% at 15% 15%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(45% 35% at 88% 22%, rgba(255, 225, 140, 0.7), rgba(255, 225, 140, 0) 70%),
-    linear-gradient(180deg, #fbefc6 0%, #fbe0b0 40%, #f8c79a 75%, #f3b08e 100%);
+    radial-gradient(120% 80% at 50% 110%, var(--accent-soft), transparent 60%),
+    var(--card);
+  perspective: 1000px;
 }
-/* A little paint grain so the sky doesn't read as a flat gradient. */
-.sky::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: var(--grain);
+.shot::before {
+  content: ""; position: absolute; left: 50%; bottom: -60px; width: 320px; height: 220px;
+  border-radius: 50%; background: var(--accent); filter: blur(60px);
+  opacity: 0; transform: translateX(-50%) scale(0.7);
+  transition: opacity 0.5s, transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-
-
-.hero {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  cursor: grab;
+.phone {
+  position: absolute; left: 50%; top: 42px; width: 210px; height: 364px;
+  margin-left: -105px;
+  border-radius: 28px; border: 6px solid #1d1d1f; overflow: hidden; background: #000;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  transform: translateY(0) rotateX(var(--rx)) rotateY(var(--ry));
+  transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.5s;
+  will-change: transform;
 }
-.hero[data-dragging] { cursor: grabbing; }
-
-/* ---------- Header + headline ---------- */
-
-.header {
-  position: fixed;
-  top: var(--inset);
-  left: var(--inset);
-  right: var(--inset);
-  z-index: 110;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 26px;
-  pointer-events: none;
+.phone img { width: 100%; height: 100%; object-fit: cover; object-position: bottom; border-radius: 22px; }
+/* The Sky Tracker capture has a grey browser bar along its top; crop it out. */
+.phone img.trim-top { height: calc(100% + 20px); margin-top: -20px; }
+.shot.is-playing::before { opacity: 0.22; transform: translateX(-50%) scale(1); }
+.shot.is-playing .phone {
+  transform: translateY(-16px) rotateX(var(--rx)) rotateY(var(--ry));
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.28);
 }
-.header > * { pointer-events: auto; }
-.wordmark {
-  font-family: var(--serif);
-  font-size: 28px;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  text-decoration: none;
-  white-space: nowrap;
-  /* One line tall. Clipped top and bottom only, so the longer line can run past the name's width. */
-  display: block;
-  height: 1.2em;
-  overflow-x: visible;
-  overflow-y: clip;
-  cursor: default;
+.play-hint {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 8px; border-radius: 999px;
+  background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500;
+  transition: opacity 0.3s;
 }
-.wordmark-roll {
-  position: relative;
-  display: block;
-  padding-top: 1.2em;
-  transform: translateY(-1.2em);
-  transition: transform 0.45s var(--ease);
-}
-.wordmark:hover .wordmark-roll { transform: none; }
-.wordmark-line { display: block; height: 1.2em; }
-/* The hover line sits above the name without widening the header, so the links keep their room on phones. */
-.wordmark-line:first-child { position: absolute; top: 0; left: 0; }
-.nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-}
-.page.is-home .nav { opacity: 1; transform: none; }
-.page:not(.is-home) .nav { pointer-events: none; }
-.nav-link {
-  border: 0;
-  background: none;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ink);
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.nav-link:hover { background: rgba(255, 255, 255, 0.6); }
-:is(.nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-
-/* ---------- Loader ---------- */
-
-.loader-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: var(--white);
-  pointer-events: none;
-}
-.loader-ui {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  pointer-events: none;
-}
-.loader-brand {
-  position: absolute;
-  top: 34px;
-  left: 36px;
-  font-family: var(--serif);
-  font-size: 60px;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  transform-origin: 0 0;
-}
-.loader-progress {
-  position: absolute;
-  right: 36px;
-  bottom: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  transition: opacity 0.5s ease, transform 0.6s var(--ease);
-}
-.loader-skip {
-  position: absolute;
-  left: 36px;
-  bottom: 36px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border: 1px solid rgba(27, 23, 20, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.8);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: opacity 0.5s ease;
-}
-.loader-skip kbd {
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: rgba(27, 23, 20, 0.08);
-}
-.loader-ui.is-leaving .loader-progress { opacity: 0; transform: translateY(14px); }
-.loader-ui.is-leaving .loader-skip { opacity: 0; }
-
-.scramble {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-.counter {
-  display: flex;
-  align-items: flex-start;
-  font-family: var(--mono);
-  font-weight: 500;
-  font-size: clamp(88px, 15vw, 210px);
-  line-height: 1;
-  letter-spacing: -0.06em;
-  font-variant-numeric: tabular-nums;
-}
-.digit {
-  display: inline-block;
-  height: 1em;
-  overflow: hidden;
-}
-.digit.is-dim { opacity: 0.16; }
-.digit-col {
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.digit-col span { height: 1em; display: block; }
-.counter-pct { font-size: 0.28em; margin: 0.18em 0 0 0.12em; letter-spacing: 0; }
-
-/* ---------- Cards ---------- */
-
-/* While the intro plays, keep each card's drawing as it moves instead of
-   redrawing it at every new size (it is drawn crisp again once the row settles),
-   and don't let the cards be clicked yet. */
-.page.is-entering .pcard { will-change: transform; pointer-events: none; }
-.pcard {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transform-style: preserve-3d;
-  color: #fff;
-  font-size: calc(16px * var(--u));
-  -webkit-tap-highlight-color: transparent;
-  visibility: hidden;
-}
-.pcard-face {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: calc(18px * var(--u));
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  box-shadow: 0 calc(18px * var(--u)) calc(40px * var(--u)) rgba(31, 20, 40, calc(0.28 * var(--appear, 1)));
-}
-/* Cards fade in from the white loader, but stay solid the whole time. If they
-   went see-through, overlapping cards showed through each other and flickered. */
-.pcard-face::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  border-radius: inherit;
-  background: var(--white);
-  opacity: calc(1 - var(--appear, 1));
-  pointer-events: none;
-}
-.pcard-front { background: #111; }
-/* Outside the language spotlight: a dark veil. It sits over everything on the
-   card but lets clicks through, so a dimmed card still opens. */
-.pcard-front::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: rgba(22, 16, 28, 0.66);
-  opacity: 0;
-  transition: opacity 0.45s var(--ease);
-  pointer-events: none;
-}
-.pcard[data-dim] .pcard-front::before { opacity: 1; }
-.pcard-back {
-  transform: rotateY(180deg);
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 60%),
-    #17130f;
-  border: calc(1px * var(--u)) solid rgba(243, 237, 228, 0.14);
-}
-.pcard-back::before {
-  content: "";
-  position: absolute;
-  inset: calc(10px * var(--u));
-  border-radius: calc(11px * var(--u));
-  border: calc(1px * var(--u)) solid rgba(243, 237, 228, 0.22);
-}
-.pcard-mono {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 4.2em;
-  color: #efe6d8;
-  letter-spacing: -0.04em;
+.play-hint i { width: 0; height: 0; border-style: solid; border-width: 4px 0 4px 7px; border-color: transparent transparent transparent currentColor; }
+.shot.is-playing .play-hint { opacity: 0; }
+@media (hover: none) { .play-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .phone, .shot::before { transition: none; }
+  .shot.is-playing .phone { transform: none; }
+  .play-hint { display: none; }
 }
 
-.pcard-cover, .preview {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.pcard-cover { object-fit: cover; display: block; }
-.preview {
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  overflow: hidden;
-  container-type: inline-size;
-  background: transparent;
-}
-.preview[data-playing] { opacity: 1; }
-.preview .drift { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.preview:not([data-run]) * { animation-play-state: paused !important; }
-
-.pcard-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.86) 100%);
-}
-.pcard-top {
-  position: absolute;
-  top: 0.9em;
-  left: 0.9em;
-  right: 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
-  font-size: 0.72em;
-  font-weight: 600;
-}
-/* No backdrop blur on anything inside a card: the cards move every frame, and a
-   blur behind a moving card is redrawn every frame. A slightly stronger tint
-   reads the same over the card's dark shading. */
-.pcard-lang, .pcard-live {
-  padding: 0.35em 0.75em;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  letter-spacing: 0.02em;
-}
-.pcard-live::before {
-  content: "";
-  display: inline-block;
-  width: 0.5em;
-  height: 0.5em;
-  margin-right: 0.4em;
-  border-radius: 50%;
-  background: #4ade80;
-  vertical-align: 0.05em;
-}
-.pcard-num { margin-left: auto; font-family: var(--mono); opacity: 0.8; }
-.pcard-bottom { position: absolute; left: 1em; right: 1em; bottom: 1em; }
-.pcard-title {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: 1.75em;
-  line-height: 1;
-  letter-spacing: -0.01em;
-}
-.pcard-blurb {
-  margin: 0.5em 0 0;
-  font-size: 0.78em;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.82);
-}
-.pcard-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.75em; }
-.pcard-cta {
-  display: inline-block;
-  padding: 0.45em 0.9em;
-  border-radius: 999px;
-  background: #fff;
-  color: #111;
-  font-size: 0.72em;
-  font-weight: 600;
-  opacity: 0;
-  transform: translateY(0.4em);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-/* The repo link covers the whole front; the Live demo button sits above it. */
-.pcard-link { position: absolute; inset: 0; z-index: 3; border-radius: inherit; -webkit-tap-highlight-color: transparent; }
-.pcard-demo {
-  position: relative;
-  z-index: 4;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
-  transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease, color 0.2s ease;
-}
-.pcard-demo::before {
-  content: "";
-  display: inline-block;
-  width: 0.5em;
-  height: 0.5em;
-  margin-right: 0.45em;
-  border-radius: 50%;
-  background: #4ade80;
-  vertical-align: 0.05em;
-}
-.pcard-demo:hover { background: #fff; color: #111; }
-/* Keyboard focus only: a clicked link keeps focus when you come back to the tab,
-   which would otherwise leave the buttons showing on a card you aren't hovering. */
-.pcard[data-hover] .pcard-cta, .pcard:has(:focus-visible) .pcard-cta { opacity: 1; transform: none; }
-.pcard-link:focus-visible, .pcard-demo:focus-visible { outline: none; }
-.pcard:has(.pcard-link:focus-visible) .pcard-front { box-shadow: 0 0 0 calc(3px * var(--u)) #fff, 0 0 0 calc(6px * var(--u)) var(--ink); }
-.pcard-demo:focus-visible { box-shadow: 0 0 0 calc(2px * var(--u)) #fff, 0 0 0 calc(4px * var(--u)) var(--ink); }
-
-/* Terminal replays */
-.term {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 3.6em 1em 1em;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  background: radial-gradient(120% 70% at 50% 0%, #151a16, #070908);
-  color: #d6dfd6;
-  font-family: var(--mono);
-  font-size: 0.62em;
-  line-height: 1.45;
-  white-space: pre;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 68%);
-          mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 68%);
-}
-.term b { color: var(--accent); font-weight: 500; }
-.caret {
-  display: inline-block;
-  width: 0.6em;
-  height: 1.05em;
-  vertical-align: -0.2em;
-  background: var(--accent);
-  animation: blink 1s steps(1) infinite;
-}
-@keyframes blink { 50% { opacity: 0; } }
-
-/* Screenshot previews */
-.pan {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: auto;
-  max-width: none;
-  opacity: 0;
-  animation: pan-a 16s ease-in-out infinite;
-}
-.pan-1 { animation-name: pan-b; }
-@keyframes pan-a {
-  0% { opacity: 1; transform: translateX(0); }
-  44% { opacity: 1; transform: translateX(calc(-100% + 100cqw)); }
-  50%, 100% { opacity: 0; transform: translateX(calc(-100% + 100cqw)); }
-}
-@keyframes pan-b {
-  0%, 44% { opacity: 0; transform: translateX(0); }
-  50% { opacity: 1; transform: translateX(0); }
-  94% { opacity: 1; transform: translateX(calc(-100% + 100cqw)); }
-  100% { opacity: 0; transform: translateX(calc(-100% + 100cqw)); }
-}
-.drift { animation: drift 14s ease-in-out infinite alternate; transform-origin: 40% 30%; }
-@keyframes drift { to { transform: scale(1.22) translate(3%, 4%); } }
-
-/* ---------- Bar under the cards ---------- */
-
-/* A frosted-glass bar with the headline, project count and languages. */
-.headline {
-  position: absolute;
-  left: calc(var(--inset) + 18px);
-  right: calc(var(--inset) + 18px);
-  bottom: calc(var(--inset) + 18px);
-  z-index: 3;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 32px;
-  padding: 18px 26px 18px 30px;
-  border: 1px solid transparent;
-  border-radius: 24px;
-  /* Frosted glass, with a soft pastel edge. */
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.38)) padding-box,
-    linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(196, 184, 255, 0.7) 45%, rgba(255, 196, 168, 0.85)) border-box;
-  backdrop-filter: blur(18px) saturate(1.5);
-  -webkit-backdrop-filter: blur(18px) saturate(1.5);
-  box-shadow: 0 18px 50px rgba(52, 38, 92, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 1s var(--ease), transform 1s var(--ease);
-}
-/* The text fades in a little behind the bar itself. */
-.headline > * { opacity: 0; transition: opacity 1s var(--ease); }
-.page.is-home :is(.headline, .headline > *) { opacity: 1; transform: none; }
-.headline h1 {
-  margin: 0;
-  font-family: var(--serif);
-  font-weight: 400;
-  font-size: clamp(34px, 3.6vw, 52px);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-}
-.headline h1 em { font-style: italic; }
-.headline p { margin: 8px 0 0; max-width: 58ch; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
-/* "built" opens the About me panel. A blue underline that fills in like a highlighter on hover. */
-.bar-about {
-  --blue: #2b5fd9;
-  pointer-events: auto;
-  color: var(--blue);
+/* Words picked out in the hero and About text. */
+.hl {
+  color: var(--accent);
   text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 6px;
-  padding: 0 0.08em;
-  border-radius: 4px;
-  background: linear-gradient(rgba(43, 95, 217, 0.2), rgba(43, 95, 217, 0.2)) left bottom / 0% 100% no-repeat;
-  transition: background-size 0.35s var(--ease), color 0.35s var(--ease);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
-.bar-about:hover { background-size: 100% 100%; color: #1d47b0; }
-.bar-about:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
-.bar-meta { display: flex; align-items: center; gap: 22px; min-width: 0; }
-.bar-count { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; padding-right: 22px; border-right: 1px solid rgba(27, 23, 20, 0.12); }
-.bar-count strong { font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1; animation: count-in 0.45s var(--ease); }
-.bar-count span { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
-@keyframes count-in { from { opacity: 0; transform: translateY(0.3em); } }
 
-/* Language chips: pick one to spotlight its projects in the row. They scroll
-   sideways when the bar is narrow, fading out at the edge. */
-.bar-langs {
-  display: flex;
-  gap: 6px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 2px 20px 2px 2px;
-  margin-right: -20px;
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
-          mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
+/* The flow strip: numbered steps joined by a line a light runs along. */
+.flow { margin: 0; padding: 20px; border-radius: 14px; background: var(--card); border: 1px solid var(--hairline); }
+.flow ol { position: relative; display: grid; gap: 10px; }
+.flow ol::before {
+  content: ""; position: absolute; left: 13px; top: 14px; bottom: 14px; width: 1px; background: var(--hairline);
 }
-.bar-langs::-webkit-scrollbar { display: none; }
-.lang-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-shrink: 0;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(27, 23, 20, 0.08);
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  pointer-events: auto;
-  transition: background 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease), transform 0.15s ease;
+.flow ol::after {
+  content: ""; position: absolute; left: 11px; top: 10px; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft);
+  animation: travel 4.5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
 }
-.lang-chip:hover { background: #fff; border-color: rgba(27, 23, 20, 0.2); }
-.lang-chip:active { transform: scale(0.95); }
-.lang-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--white); }
-.lang-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.lang-count { font-family: var(--mono); font-size: 10.5px; opacity: 0.5; }
-.lang-chip[aria-pressed="true"] .lang-count { opacity: 0.7; }
-.bar-hint {
-  display: inline-flex;
-  gap: 8px;
-  padding: 9px 14px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+@keyframes travel {
+  0% { transform: translateY(0); opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(calc((var(--n) - 1) * 52px)); opacity: 0; }
 }
-/* When space is tight the chips stay and the drag hint goes: the cursor already says drag. */
-@media (max-width: 1600px) { .bar-hint { display: none; } }
+.flow li {
+  position: relative; display: grid; grid-template-columns: 28px auto 1fr; align-items: center; gap: 12px;
+  min-height: 42px;
+}
+.flow-num {
+  position: relative; z-index: 1;
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--hairline);
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+}
+.flow strong { font-size: 15px; font-weight: 600; }
+.flow-note { font-family: var(--mono); font-size: 12px; color: var(--faint); justify-self: end; text-align: right; }
+.flow figcaption { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--faint); }
+
+/* Wide, image-less cards lay the flow out horizontally. */
+@media (min-width: 900px) {
+  .project:not(.has-image) .flow ol { grid-template-columns: repeat(var(--n), 1fr); gap: 0; }
+  .project:not(.has-image) .flow ol::before { left: 14px; right: 14px; top: 13px; bottom: auto; width: auto; height: 1px; }
+  .project:not(.has-image) .flow ol::after { top: 11px; left: 12px; animation-name: travel-x; }
+  .project:not(.has-image) .flow li { grid-template-columns: 1fr; gap: 4px; align-content: start; padding-right: 10px; }
+  .project:not(.has-image) .flow-num { margin-bottom: 8px; }
+  .project:not(.has-image) .flow-note { justify-self: start; text-align: left; }
+  .project:not(.has-image) .project-side { justify-content: center; }
+}
+@keyframes travel-x {
+  0% { transform: translateX(0); opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(calc((var(--n) - 1) * (100cqw / var(--n)))); opacity: 0; }
+}
+.flow ol { container-type: inline-size; }
+
+@media (max-width: 900px) {
+  .project { grid-template-columns: 1fr; gap: 28px; padding: 28px; }
+}
+@media (max-width: 560px) {
+  .project { padding: 22px 18px; border-radius: 20px; }
+  .flow { padding: 16px 14px; }
+  .flow li { grid-template-columns: 28px 1fr; }
+  .flow-note { grid-column: 2; justify-self: start; text-align: left; margin-top: -10px; }
+  .flow ol::after { animation: none; display: none; }
+}
+
+.more-title { margin: 72px 0 20px; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.more { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.more-card {
+  position: relative; display: flex; flex-direction: column; gap: 6px; height: 100%;
+  padding: 20px 22px; border-radius: var(--radius);
+  border: 1px solid var(--hairline); background: var(--paper);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.more-card:hover { border-color: transparent; box-shadow: var(--shadow); transform: translateY(-2px); }
+.more-card strong { font-size: 16px; font-weight: 600; padding-right: 20px; }
+.more-card > span:not(.more-lang):not(.more-arrow) { font-size: 14px; color: var(--muted); line-height: 1.5; }
+.more-lang { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+.more-arrow { position: absolute; top: 18px; right: 20px; color: var(--faint); transition: color 0.2s, transform 0.2s; }
+.more-card:hover .more-arrow { color: var(--accent); transform: translate(2px, -2px); }
+
+/* ---------- Experience ---------- */
+.timeline { display: grid; }
+.job {
+  display: grid; grid-template-columns: 220px 1fr; gap: 32px;
+  padding: 32px 0; border-top: 1px solid var(--hairline);
+}
+.job:first-child { border-top: 0; padding-top: 0; }
+.job-when { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; color: var(--muted); }
+.job-where { color: var(--faint); }
+.job-when .chip { margin-top: 6px; }
+.job-company { font-size: 15px; font-weight: 600; color: var(--accent); }
+.job h3 { margin-top: 2px; font-family: var(--serif); font-size: 32px; line-height: 1.1; font-weight: 400; }
+.job ul { display: grid; gap: 10px; margin-top: 16px; }
+.job ul li { position: relative; padding-left: 18px; color: var(--muted); font-size: 16px; }
+.job ul li::before { content: ""; position: absolute; left: 2px; top: 0.7em; width: 5px; height: 5px; border-radius: 50%; background: var(--hairline); }
 @media (max-width: 720px) {
-  .headline { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 18px; left: calc(var(--inset) + 10px); right: calc(var(--inset) + 10px); bottom: calc(var(--inset) + 10px); }
-  .headline h1 { font-size: 32px; }
-  .bar-meta { width: 100%; gap: 14px; }
-  .bar-count { padding-right: 14px; }
-  .bar-count strong { font-size: 34px; }
+  .job { grid-template-columns: 1fr; gap: 12px; }
+  .job-when { flex-direction: row; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+  .job-when .chip { margin-top: 0; }
 }
 
-/* ---------- About me ---------- */
+/* ---------- About ---------- */
+.about { display: grid; grid-template-columns: 1.3fr 1fr; gap: 48px; align-items: start; }
+.about-text { display: grid; gap: 20px; font-size: 19px; color: var(--muted); line-height: 1.6; }
+.card { padding: 28px; border-radius: var(--radius); background: var(--surface); }
+.section.alt .card { background: var(--card); }
+.edu h3 { margin-top: 8px; font-family: var(--serif); font-size: 30px; line-height: 1.1; font-weight: 400; }
+.edu > p:not(.eyebrow):not(.edu-course) { margin-top: 4px; color: var(--muted); }
+.edu-facts { display: flex; gap: 32px; margin: 22px 0 0; }
+.edu-facts dt { font-size: 12px; color: var(--faint); }
+.edu-facts dd { margin: 2px 0 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+.edu-course { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--hairline); font-size: 14px; color: var(--muted); }
+@media (max-width: 820px) { .about { grid-template-columns: 1fr; gap: 32px; } }
 
-.about {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: rgba(40, 24, 10, 0.28);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.4s var(--ease), visibility 0s linear 0.4s;
-}
-.about.is-open { opacity: 1; visibility: visible; transition: opacity 0.4s var(--ease); }
-.about-panel {
-  position: relative;
-  width: min(560px, 100%);
-  max-height: 100%;
-  overflow-y: auto;
-  padding: 34px 36px 30px;
-  border-radius: 24px;
-  /* Solid, so the cards can't show through, with no blur to redraw behind it. */
-  background: #fffcf6;
-  box-shadow: 0 30px 80px rgba(60, 34, 10, 0.3);
-  transform: translateY(24px);
-  transition: transform 0.5s var(--ease);
-}
-.about.is-open .about-panel { transform: none; }
-.about-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 36px;
-  height: 36px;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(27, 23, 20, 0.06);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-.about-close:hover { background: rgba(27, 23, 20, 0.12); }
-.about-close:focus-visible, .about-links a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.about-eyebrow { margin: 0; padding-right: 44px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-.about-panel h2 { margin: 10px 0 0; font-family: var(--serif); font-weight: 400; font-size: 48px; line-height: 1; }
-.about-panel h2 em { font-style: italic; color: #2b5fd9; }
-.about-lede { margin: 14px 0 0; font-size: 16px; line-height: 1.5; }
-.about-facts { display: grid; gap: 14px; margin: 24px 0 0; padding: 20px 0 0; border-top: 1px solid rgba(27, 23, 20, 0.1); }
-.about-facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
-.about-facts dd { margin: 3px 0 0; font-size: 14.5px; line-height: 1.45; }
-.about-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-.about-links a {
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--white);
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-}
-.about-links a:hover { background: #2b5fd9; }
-@media (max-width: 720px) {
-  .about { padding: 12px; }
-  .about-panel { padding: 28px 22px 24px; }
-  .about-panel h2 { font-size: 38px; }
-}
+/* ---------- Skills ---------- */
+.skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.skill h3 { font-size: 15px; font-weight: 600; }
+.skill ul { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.skill li { padding: 5px 11px; border-radius: 999px; background: var(--surface); font-size: 14px; }
 
-/* ---------- Scene ---------- */
-
-.scene { position: absolute; inset: 0; perspective: var(--persp, 1000px); }
-.stage { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
-/* --card-size is the row's scale, set by the hero, so cards are drawn at the size they're shown in the row. */
-.hero .pcard {
-  --u: calc(0.6667 * var(--card-size, 1));
-  width: calc(180px * var(--card-size, 1));
-  height: calc(320px * var(--card-size, 1));
-  margin: calc(-160px * var(--card-size, 1)) 0 0 calc(-90px * var(--card-size, 1));
+/* ---------- Contact ---------- */
+.contact { text-align: center; padding: 128px 0; }
+.contact .wrap { display: flex; flex-direction: column; align-items: center; }
+.contact-title { font-size: clamp(36px, 6vw, 64px); }
+.contact .section-sub { margin-left: auto; margin-right: auto; }
+.contact-email {
+  margin-top: 36px; font-size: clamp(22px, 4vw, 34px); font-weight: 600; letter-spacing: -0.02em; color: var(--accent);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 2px no-repeat;
+  transition: background-size 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+  overflow-wrap: anywhere;
 }
+.contact-email:hover { background-size: 100% 2px; }
+.contact .ctas { justify-content: center; }
 
-/* ---------- Small screens ---------- */
+/* ---------- Footer ---------- */
+.footer { border-top: 1px solid var(--hairline); padding: 28px 0 40px; font-size: 13px; color: var(--faint); }
+.footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+.footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
+.footer a:hover { color: var(--ink); }
 
-@media (max-width: 720px) {
-  :root { --inset: 6px; --radius: 16px; }
-  /* Tight enough that the name and all three links fit a 360px phone. */
-  .header { padding: 16px 12px; gap: 8px; }
-  .wordmark { font-size: 20px; }
-  .nav { gap: 0; }
-  .nav-link { padding: 7px 5px; font-size: 12.5px; }
-  .loader-brand { font-size: 40px; left: 20px; top: 24px; }
-  .loader-progress { right: 18px; bottom: 18px; }
-  .loader-skip { left: 18px; bottom: 24px; }
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .wrap, .nav-inner { padding: 0 16px; }
+  .hero { padding: 64px 0 80px; }
+  .section { padding: 72px 0; }
+  .section-head { margin-bottom: 36px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .frame, .nav, .headline, .headline > *, .bar-about, .about, .about-panel, .wordmark-roll, .pcard-front::before { transition: none; }
-  .bar-count strong { animation: none; }
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .flow ol::after { animation: none; display: none; }
 }
 
-/* Links open from script (no href), so give them the hand cursor back. */
-a[role="link"] {
-  cursor: pointer;
+
+/* =================================================================
+   The ring at the top of the page, and the ring cards below it
+   ================================================================= */
+
+/* The hero is one screen tall; the ring's frame fills it. */
+.ring-hero { position: relative; height: 100vh; height: 100svh; min-height: 600px; --out: 0; }
+/* Scrolling away: the sunset fades into the page's paper and the row tips forward. */
+.sky-fade {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--paper); opacity: calc(var(--out) * 1.1);
 }
+.ring-tilt {
+  position: absolute; inset: 0; z-index: 1;
+  transform-origin: 50% 85%;
+  transform: perspective(1400px) translateY(calc(var(--out) * 14vh)) rotateX(calc(var(--out) * 38deg)) scale(calc(1 - var(--out) * 0.12));
+  opacity: calc(1 - var(--out) * 0.55);
+}
+.page.is-home .ring-hero .headline { transform: translateY(calc(var(--out) * 40px)); opacity: calc(1 - var(--out) * 1.6); }
+
+/* The new headline inside the ring's frosted bar. */
+.headline { align-items: flex-end; }
+.bar-title { min-width: 0; flex: 1 1 520px; }
+.headline { padding-top: 14px; padding-bottom: 14px; }
+.headline h1 { white-space: normal; font-size: clamp(26px, 2.5vw, 38px); line-height: 1.04; }
+.headline h1 em { color: #6b5a4b; }
+.headline p { margin-top: 6px; font-size: 14px; max-width: 78ch; }
+.bar-status {
+  display: inline-flex; margin-bottom: 8px; padding: 3px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75); color: var(--live); font-size: 12px; font-weight: 600;
+}
+.headline .bar-title, .headline .bar-meta { pointer-events: auto; }
+.bar-meta { align-items: center; }
+.bar-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bar-btn {
+  display: inline-flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid rgba(27, 23, 20, 0.18); background: rgba(255, 255, 255, 0.5);
+  font-size: 14px; font-weight: 500; color: var(--ink); transition: background 0.2s, border-color 0.2s;
+}
+.bar-btn:hover { background: #fff; }
+.bar-btn-primary { background: #0071e3; border-color: #0071e3; color: #fff; }
+.bar-btn-primary:hover { background: #0058b9; border-color: #0058b9; }
+.bar-scroll { margin-left: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: #4d453e; }
+
+/* The header stays with you down the page; past the hero it gets a paper backing. */
+.header { transition: background 0.35s, box-shadow 0.35s, padding 0.35s; border-radius: 18px; }
+.header.is-solid {
+  background: rgba(239, 235, 228, 0.82);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  backdrop-filter: saturate(160%) blur(16px);
+  box-shadow: 0 1px 0 rgba(27, 23, 20, 0.06), 0 10px 30px rgba(60, 40, 20, 0.08);
+  padding-top: 12px; padding-bottom: 12px;
+}
+.nav-link { color: var(--ink); }
+.nav-link.is-active { background: rgba(255, 255, 255, 0.75); }
+.nav-resume { margin-left: 6px; background: #1b1714; color: #fff !important; }
+.nav-resume:hover { background: #3a332d !important; }
+@media (max-width: 900px) { .nav-experience, .nav-skills { display: none; } }
+@media (max-width: 560px) { .nav-about { display: none; } }
+
+/* A ring card standing on its own (featured row, project blocks, carousel). */
+.loose { position: relative; width: calc(180px * var(--s)); height: calc(320px * var(--s)); }
+.loose .pcard {
+  --u: calc(0.6667 * var(--s));
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  visibility: visible;
+}
+
+/* The four featured cards drop out of the ring and land in a fan. */
+.drop-row {
+  position: relative; display: flex; justify-content: center; gap: 28px;
+  margin: 8px 0 72px; padding-top: 10px; perspective: 1400px;
+}
+.drop-card { transform-origin: 50% 0; will-change: transform, opacity; cursor: pointer; }
+.drop-card .pcard-face { box-shadow: 0 26px 50px rgba(60, 40, 20, 0.22); }
+.drop-shadow {
+  position: absolute; left: 50%; bottom: -26px; width: min(900px, 90%); height: 40px;
+  transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(80, 50, 20, 0.16), transparent);
+  z-index: -1;
+}
+@media (max-width: 960px) {
+  .drop-row { flex-wrap: wrap; gap: 18px; }
+}
+
+/* Project blocks: the frame is the project's ring card. */
+.project { background: var(--card); }
+.project.is-flipped .project-main { order: 2; }
+.project.is-flipped .project-side { order: 1; }
+.project .shot { height: 470px; background: radial-gradient(120% 80% at 50% 110%, rgba(243, 176, 142, 0.35), transparent 60%), var(--paper); border-color: transparent; }
+.project .phone {
+  top: 36px; width: 225px; height: 400px; margin-left: -112.5px;
+  border: 0; border-radius: 15px; background: transparent; overflow: visible; box-shadow: none;
+}
+.project .phone .pcard-face { box-shadow: 0 24px 50px rgba(60, 40, 20, 0.25); }
+.project .shot.is-playing .phone { transform: translateY(-14px) rotateX(var(--rx)) rotateY(var(--ry)); box-shadow: none; }
+.project .shot::before { background: #f3b08e; }
+.project .flow { background: var(--paper); border-color: transparent; }
+.project .flow-num { background: var(--card); }
+.project .tags li { background: var(--paper); border-color: transparent; }
+.play-hint { background: rgba(255, 255, 255, 0.85); }
+@media (max-width: 900px) {
+  .project.is-flipped .project-main { order: 1; }
+  .project.is-flipped .project-side { order: 2; }
+}
+
+/* The rest of the ring: a draggable coverflow. */
+.more-head { margin: 96px 0 0; }
+.more-title { margin: 0; font-family: var(--serif); font-size: clamp(32px, 4vw, 46px); font-weight: 400; letter-spacing: 0; }
+.more-head p { margin-top: 8px; max-width: 46em; color: var(--muted); }
+.carousel {
+  position: relative; height: 440px; margin-top: 24px; overflow: hidden;
+  perspective: 1300px; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.carousel[data-dragging] { cursor: grabbing; }
+.carousel-stage { position: absolute; left: 50%; top: 24px; transform-style: preserve-3d; }
+.carousel-slot { position: absolute; left: -105px; top: 0; transform-style: preserve-3d; will-change: transform; }
+
+/* Contact: the sunset comes back, with the card back from the loader. */
+.contact { border-top: 0; padding: 10px; }
+.contact .wrap {
+  max-width: none; padding: 110px 24px 120px; border-radius: 22px;
+  background:
+    radial-gradient(75% 55% at 50% 100%, rgba(255, 180, 110, 0.85), rgba(255, 180, 110, 0) 70%),
+    radial-gradient(45% 35% at 88% 22%, rgba(255, 225, 140, 0.7), rgba(255, 225, 140, 0) 70%),
+    linear-gradient(180deg, #fbefc6 0%, #fbe0b0 40%, #f8c79a 75%, #f3b08e 100%);
+}
+.contact .eyebrow { color: #4d453e; }
+.contact-title { font-size: clamp(44px, 7vw, 84px); }
+.contact .btn-ghost {
+  position: relative; overflow: hidden; isolation: isolate; gap: 0;
+  border-color: rgba(27, 23, 20, 0.25); background: rgba(255, 255, 255, 0.4);
+  transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1), box-shadow 0.35s, color 0.3s, border-color 0.3s, gap 0.35s;
+}
+/* Ink fills the button from the bottom up as it lifts. */
+.contact .btn-ghost::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--ink); transform: translateY(101%);
+  transition: transform 0.4s cubic-bezier(0.6, 0, 0.2, 1);
+}
+/* An arrow slides in beside the label. */
+.contact .btn-ghost::after {
+  content: "↗"; display: inline-block; width: 0; opacity: 0; overflow: hidden;
+  transform: translate(-6px, 6px);
+  transition: width 0.35s, opacity 0.3s, transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.contact .btn-ghost:hover, .contact .btn-ghost:focus-visible {
+  color: var(--paper); border-color: var(--ink); gap: 8px;
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px rgba(60, 30, 10, 0.25);
+}
+.contact .btn-ghost:hover::before, .contact .btn-ghost:focus-visible::before { transform: none; }
+.contact .btn-ghost:hover::after, .contact .btn-ghost:focus-visible::after { width: 0.9em; opacity: 1; transform: none; }
+.contact .btn-ghost:active { transform: translateY(-1px) scale(0.97); }
+.mk-card {
+  display: grid; place-items: center; width: 112px; height: 168px; margin-bottom: 30px;
+  border-radius: 14px; border: 1px solid rgba(243, 237, 228, 0.14);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 60%), #17130f;
+  box-shadow: 0 20px 44px rgba(80, 40, 10, 0.3);
+  font-family: var(--serif); font-size: 40px; color: #f3ede4;
+  transition: transform 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.mk-card.is-in { transform: rotate(-8deg); }
+.mk-card:hover { transform: rotate(4deg) translateY(-6px) scale(1.04); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-tilt, .page.is-home .ring-hero .headline { transform: none; }
+}
+
+/* The frosted bar blocks the cards that run down behind it, so the pointer over
+   the bar (say, under "13 projects") is never taken as being on a card. */
+.ring-hero .headline { pointer-events: auto; }
+.page:not(.is-home) .ring-hero .headline { pointer-events: none; }

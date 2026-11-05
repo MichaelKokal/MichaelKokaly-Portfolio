@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import type { Value } from "../anim";
 import { ProjectCard } from "../cards/ProjectCard";
 import type { PreviewCtl } from "../cards/preview";
@@ -19,6 +19,8 @@ type Props = {
   /** Spotlight this language: other cards dim and the row glides to the nearest match. */
   language: string | null;
   reduced: boolean;
+  /** The bar under the row; the row keeps clear of its height. */
+  bar?: RefObject<HTMLElement | null>;
 };
 
 /** How much a dimmed card shrinks. */
@@ -35,9 +37,10 @@ const ringSlots = cards.map((i) => ringSlotOf(i));
 const MIDDLE = "oriental";
 
 /** The space the row keeps clear for the header and the bar below it. */
-function rowLayout(w: number, h: number): StripLayout {
-  // Phones need more room below, because the bar stacks onto more lines.
-  const bottom = w < 720 ? 250 : Math.min(214, Math.max(180, h * 0.22));
+function rowLayout(w: number, h: number, bar: number): StripLayout {
+  // Keep the cards clear of the bar under them: its real height, plus its gap
+  // from the frame's edge and a little air. Before it is measured, a fair guess.
+  const bottom = bar > 0 ? bar + 56 : w < 720 ? 330 : 230;
   return { w, h, top: 92, bottom };
 }
 
@@ -52,7 +55,7 @@ function ringFit(w: number, h: number) {
  * flat cards that slides slowly to the right and answers to drag, swipe and
  * scroll.
  */
-export function PortfolioHero({ projects, formation, expansion, interactive, paused, language, reduced }: Props) {
+export function PortfolioHero({ projects, formation, expansion, interactive, paused, language, reduced, bar }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const n = projects.length;
   // Shift the whole list so MIDDLE sits on the middle card, keeping the order.
@@ -95,7 +98,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
     const ro = new ResizeObserver(([e]) => (size = { w: e.contentRect.width, h: e.contentRect.height }));
     ro.observe(el);
 
-    let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0;
+    let velocity = 0, frame = 0, hovered = -1, raf = 0, last = performance.now(), lastStart = 0, drift = 0, onCardAt = -Infinity, barH = bar?.current?.offsetHeight ?? 0;
     let pxToStep = STEP / 300;
     let spotlit: string | null = null;
     // How dimmed each card is, 0 to 1, eased toward its target.
@@ -126,14 +129,23 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
       const form = formation.get();
       const m = expansion.get();
       const fit = ringFit(size.w, size.h);
-      const row = rowLayout(size.w, size.h);
+      if (frame % 3 === 0) barH = bar?.current?.offsetHeight ?? 0;
+      const row = rowLayout(size.w, size.h, barH);
       // One card width of drag moves the row one card.
       pxToStep = STEP / stripPose(0, 0, row).pitch;
 
       // The row slides slowly to the right on its own, easing in as the cards land.
       // It holds still under the pointer, so a moving card is easy to click, and
       // under the About me panel, whose blur would otherwise redraw every frame.
-      if (!reduced && !held.current && !pointer.dragging && hovered < 0) target.current -= SPEED * pxToStep * m * dt;
+      // It eases to a stop while the mouse is on a card, so that card is easy to click.
+      // A short grace period covers the gaps between cards, so moving across the row
+      // doesn't stop and start it. Only a drag, swipe or sideways scroll moves it otherwise.
+      if (hovered >= 0) onCardAt = now;
+      const hold = reduced || held.current || pointer.dragging || now - onCardAt < 120;
+      // Stops gently, but picks the slide back up quickly once the mouse leaves.
+      drift += ((hold ? 0 : 1) - drift) * (1 - Math.exp(-dt * (hold ? 7 : 14)));
+      if (drift < 0.001) drift = 0;
+      target.current -= SPEED * pxToStep * m * dt * drift;
 
       // A new language picked: glide the nearest matching card to the middle.
       const picked = live.current ? lang.current : null;
@@ -232,7 +244,7 @@ export function PortfolioHero({ projects, formation, expansion, interactive, pau
       ro.disconnect();
       detach();
     };
-  }, [formation, expansion, reduced, n]);
+  }, [formation, expansion, reduced, n, bar]);
 
   return (
     <div className="hero" ref={root}>

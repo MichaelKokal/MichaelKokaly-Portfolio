@@ -37,7 +37,7 @@ type Handlers = {
   wheel(delta: number): void;
 };
 
-const DRAG_THRESHOLD = 6;
+const DRAG_THRESHOLD = 10;
 const PAUSE_CANCELS_FLICK = 80;
 
 /** Drag, swipe and wheel on one element. Returns the live pointer state. */
@@ -95,11 +95,14 @@ export function attachGestures(root: HTMLElement, h: Handlers, enabled: () => bo
     e.stopPropagation();
     moved = false;
   };
+  // Only a sideways wheel or trackpad swipe moves the row. Up and down scroll the page.
   const wheel = (e: WheelEvent) => {
+    // A trackpad scrolling up or down wobbles a little sideways too: ignore that.
+    if (Math.abs(e.deltaX) < 3 || Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 2) return;
     e.preventDefault();
     if (!enabled()) return;
     const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
-    h.wheel((Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * scale);
+    h.wheel(e.deltaX * scale);
   };
   const leave = () => (pointer.inside = false);
   const noDrag = (e: Event) => e.preventDefault();

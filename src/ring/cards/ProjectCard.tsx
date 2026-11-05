@@ -1,5 +1,5 @@
 import { memo, useLayoutEffect, useRef } from "react";
-import { OutLink } from "../OutLink";
+import { OutLink } from "../../OutLink";
 import { mountPreview, type PreviewCtl } from "./preview";
 import type { Project } from "./projects";
 
@@ -34,6 +34,7 @@ export const ProjectCard = memo(function ProjectCard({ project, number, slot, on
       ref={el}
       className="pcard"
       data-slot={slot}
+      data-id={project.id}
       // Only keyboard focus slides the card to the middle. A mouse click focuses the
       // link too, and moving the card then made the click miss.
       onFocus={(e) => e.target.matches(":focus-visible") && onFocusSlot(slot)}

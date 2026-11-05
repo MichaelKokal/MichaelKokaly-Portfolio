@@ -1,0 +1,622 @@
+.page {
+  --ink: #1b1714;
+  --ink-soft: #4d453e;
+  --paper: #efebe4;
+  --white: #ffffff;
+  --inset: 10px;
+  --radius: 22px;
+  --ease: cubic-bezier(0.5, 0, 0.15, 1);
+  --serif: "Instrument Serif", Georgia, serif;
+  --sans: "Inter Tight", Inter, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+button { font: inherit; color: inherit; }
+
+/* ---------- Frame ---------- */
+
+/* The frame draws in by clipping its edges, not by resizing. Resizing re-laid
+   out the whole 3D scene on every frame of the reveal and made it stutter. The
+   clip is the same on every side, so the scene's centre never moves. */
+.frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  clip-path: inset(0 round 0);
+  transition: clip-path 1.2s var(--ease);
+}
+.page.is-home .frame { clip-path: inset(var(--inset) round var(--radius)); }
+/* While the entrance plays the cards rise over the white loader, not under it. */
+.page.is-entering .frame { z-index: 101; }
+
+.sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  will-change: opacity;
+  background:
+    radial-gradient(75% 55% at 50% 100%, rgba(255, 180, 110, 0.85), rgba(255, 180, 110, 0) 70%),
+    radial-gradient(55% 40% at 15% 15%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(45% 35% at 88% 22%, rgba(255, 225, 140, 0.7), rgba(255, 225, 140, 0) 70%),
+    linear-gradient(180deg, #fbefc6 0%, #fbe0b0 40%, #f8c79a 75%, #f3b08e 100%);
+}
+/* A little paint grain so the sky doesn't read as a flat gradient. */
+.sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+}
+
+
+.hero {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.hero[data-dragging] { cursor: grabbing; }
+
+/* ---------- Header + headline ---------- */
+
+.header {
+  position: fixed;
+  top: var(--inset);
+  left: var(--inset);
+  right: var(--inset);
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 26px;
+  pointer-events: none;
+}
+.header > * { pointer-events: auto; }
+.wordmark {
+  font-family: var(--serif);
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  /* One line tall. Clipped top and bottom only, so the longer line can run past the name's width. */
+  display: block;
+  height: 1.2em;
+  overflow-x: visible;
+  overflow-y: clip;
+  cursor: default;
+}
+.wordmark-roll {
+  position: relative;
+  display: block;
+  padding-top: 1.2em;
+  transform: translateY(-1.2em);
+  transition: transform 0.45s var(--ease);
+}
+.wordmark:hover .wordmark-roll { transform: none; }
+.wordmark-line { display: block; height: 1.2em; }
+/* The hover line sits above the name without widening the header, so the links keep their room on phones. */
+.wordmark-line:first-child { position: absolute; top: 0; left: 0; }
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+}
+.page.is-home .nav { opacity: 1; transform: none; }
+.page:not(.is-home) .nav { pointer-events: none; }
+.nav-link {
+  border: 0;
+  background: none;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-link:hover { background: rgba(255, 255, 255, 0.6); }
+:is(.nav-link, .wordmark, .loader-skip):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Loader ---------- */
+
+.loader-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--white);
+  pointer-events: none;
+}
+.loader-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  pointer-events: none;
+}
+.loader-brand {
+  position: absolute;
+  top: 34px;
+  left: 36px;
+  font-family: var(--serif);
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transform-origin: 0 0;
+}
+.loader-progress {
+  position: absolute;
+  right: 36px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  transition: opacity 0.5s ease, transform 0.6s var(--ease);
+}
+.loader-skip {
+  position: absolute;
+  left: 36px;
+  bottom: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid rgba(27, 23, 20, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.5s ease;
+}
+.loader-skip kbd {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(27, 23, 20, 0.08);
+}
+.loader-ui.is-leaving .loader-progress { opacity: 0; transform: translateY(14px); }
+.loader-ui.is-leaving .loader-skip { opacity: 0; }
+
+.scramble {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.counter {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: clamp(88px, 15vw, 210px);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.digit {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+}
+.digit.is-dim { opacity: 0.16; }
+.digit-col {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.digit-col span { height: 1em; display: block; }
+.counter-pct { font-size: 0.28em; margin: 0.18em 0 0 0.12em; letter-spacing: 0; }
+
+/* ---------- Cards ---------- */
+
+/* While the intro plays, keep each card's drawing as it moves instead of
+   redrawing it at every new size (it is drawn crisp again once the row settles),
+   and don't let the cards be clicked yet. */
+.page.is-entering .pcard { will-change: transform; pointer-events: none; }
+.pcard {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  color: #fff;
+  font-size: calc(16px * var(--u));
+  -webkit-tap-highlight-color: transparent;
+  visibility: hidden;
+}
+.pcard-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: calc(18px * var(--u));
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 calc(18px * var(--u)) calc(40px * var(--u)) rgba(31, 20, 40, calc(0.28 * var(--appear, 1)));
+}
+/* Cards fade in from the white loader, but stay solid the whole time. If they
+   went see-through, overlapping cards showed through each other and flickered. */
+.pcard-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background: var(--white);
+  opacity: calc(1 - var(--appear, 1));
+  pointer-events: none;
+}
+.pcard-front { background: #111; }
+/* Outside the language spotlight: a dark veil. It sits over everything on the
+   card but lets clicks through, so a dimmed card still opens. */
+.pcard-front::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: rgba(22, 16, 28, 0.66);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease);
+  pointer-events: none;
+}
+.pcard[data-dim] .pcard-front::before { opacity: 1; }
+.pcard-back {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 60%),
+    #17130f;
+  border: calc(1px * var(--u)) solid rgba(243, 237, 228, 0.14);
+}
+.pcard-back::before {
+  content: "";
+  position: absolute;
+  inset: calc(10px * var(--u));
+  border-radius: calc(11px * var(--u));
+  border: calc(1px * var(--u)) solid rgba(243, 237, 228, 0.22);
+}
+.pcard-mono {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 4.2em;
+  color: #efe6d8;
+  letter-spacing: -0.04em;
+}
+
+.pcard-cover, .preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.pcard-cover { object-fit: cover; display: block; }
+.preview {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  overflow: hidden;
+  container-type: inline-size;
+  background: transparent;
+}
+.preview[data-playing] { opacity: 1; }
+.preview .drift { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.preview:not([data-run]) * { animation-play-state: paused !important; }
+
+.pcard-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.86) 100%);
+}
+.pcard-top {
+  position: absolute;
+  top: 0.9em;
+  left: 0.9em;
+  right: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.72em;
+  font-weight: 600;
+}
+/* No backdrop blur on anything inside a card: the cards move every frame, and a
+   blur behind a moving card is redrawn every frame. A slightly stronger tint
+   reads the same over the card's dark shading. */
+.pcard-lang, .pcard-live {
+  padding: 0.35em 0.75em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.02em;
+}
+.pcard-live::before {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: #4ade80;
+  vertical-align: 0.05em;
+}
+.pcard-num { margin-left: auto; font-family: var(--mono); opacity: 0.8; }
+.pcard-bottom { position: absolute; left: 1em; right: 1em; bottom: 1em; }
+.pcard-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.75em;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.pcard-blurb {
+  margin: 0.5em 0 0;
+  font-size: 0.78em;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.82);
+}
+.pcard-actions { display: flex; flex-wrap: wrap; gap: 0.5em; margin-top: 0.75em; }
+.pcard-cta {
+  display: inline-block;
+  padding: 0.45em 0.9em;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-size: 0.72em;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(0.4em);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+/* The repo link covers the whole front; the Live demo button sits above it. */
+.pcard-link { position: absolute; inset: 0; z-index: 3; border-radius: inherit; -webkit-tap-highlight-color: transparent; }
+.pcard-demo {
+  position: relative;
+  z-index: 4;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+  transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease, color 0.2s ease;
+}
+.pcard-demo::before {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  background: #4ade80;
+  vertical-align: 0.05em;
+}
+.pcard-demo:hover { background: #fff; color: #111; }
+/* Keyboard focus only: a clicked link keeps focus when you come back to the tab,
+   which would otherwise leave the buttons showing on a card you aren't hovering. */
+.pcard[data-hover] .pcard-cta, .pcard:has(:focus-visible) .pcard-cta { opacity: 1; transform: none; }
+.pcard-link:focus-visible, .pcard-demo:focus-visible { outline: none; }
+.pcard:has(.pcard-link:focus-visible) .pcard-front { box-shadow: 0 0 0 calc(3px * var(--u)) #fff, 0 0 0 calc(6px * var(--u)) var(--ink); }
+.pcard-demo:focus-visible { box-shadow: 0 0 0 calc(2px * var(--u)) #fff, 0 0 0 calc(4px * var(--u)) var(--ink); }
+
+/* Terminal replays */
+.term {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 3.6em 1em 1em;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: radial-gradient(120% 70% at 50% 0%, #151a16, #070908);
+  color: #d6dfd6;
+  font-family: var(--mono);
+  font-size: 0.62em;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 68%);
+          mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 68%);
+}
+.term b { color: var(--accent); font-weight: 500; }
+.caret {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.05em;
+  vertical-align: -0.2em;
+  background: var(--accent);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Screenshot previews */
+.pan {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  opacity: 0;
+  animation: pan-a 16s ease-in-out infinite;
+}
+.pan-1 { animation-name: pan-b; }
+@keyframes pan-a {
+  0% { opacity: 1; transform: translateX(0); }
+  44% { opacity: 1; transform: translateX(calc(-100% + 100cqw)); }
+  50%, 100% { opacity: 0; transform: translateX(calc(-100% + 100cqw)); }
+}
+@keyframes pan-b {
+  0%, 44% { opacity: 0; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(0); }
+  94% { opacity: 1; transform: translateX(calc(-100% + 100cqw)); }
+  100% { opacity: 0; transform: translateX(calc(-100% + 100cqw)); }
+}
+.drift { animation: drift 14s ease-in-out infinite alternate; transform-origin: 40% 30%; }
+@keyframes drift { to { transform: scale(1.22) translate(3%, 4%); } }
+
+/* ---------- Bar under the cards ---------- */
+
+/* A frosted-glass bar with the headline, project count and languages. */
+.headline {
+  position: absolute;
+  left: calc(var(--inset) + 18px);
+  right: calc(var(--inset) + 18px);
+  bottom: calc(var(--inset) + 18px);
+  z-index: 3;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 18px 26px 18px 30px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  /* Frosted glass, with a soft pastel edge. */
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.38)) padding-box,
+    linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(196, 184, 255, 0.7) 45%, rgba(255, 196, 168, 0.85)) border-box;
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow: 0 18px 50px rgba(52, 38, 92, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 1s var(--ease), transform 1s var(--ease);
+}
+/* The text fades in a little behind the bar itself. */
+.headline > * { opacity: 0; transition: opacity 1s var(--ease); }
+.page.is-home :is(.headline, .headline > *) { opacity: 1; transform: none; }
+.headline h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(34px, 3.6vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.headline h1 em { font-style: italic; }
+.headline p { margin: 8px 0 0; max-width: 58ch; font-size: 14px; line-height: 1.45; color: var(--ink-soft); }
+/* "built" opens the About me panel. A blue underline that fills in like a highlighter on hover. */
+.bar-about {
+  --blue: #2b5fd9;
+  pointer-events: auto;
+  color: var(--blue);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+  padding: 0 0.08em;
+  border-radius: 4px;
+  background: linear-gradient(rgba(43, 95, 217, 0.2), rgba(43, 95, 217, 0.2)) left bottom / 0% 100% no-repeat;
+  transition: background-size 0.35s var(--ease), color 0.35s var(--ease);
+}
+.bar-about:hover { background-size: 100% 100%; color: #1d47b0; }
+.bar-about:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.bar-meta { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.bar-count { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; padding-right: 22px; border-right: 1px solid rgba(27, 23, 20, 0.12); }
+.bar-count strong { font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1; animation: count-in 0.45s var(--ease); }
+.bar-count span { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
+@keyframes count-in { from { opacity: 0; transform: translateY(0.3em); } }
+
+/* Language chips: pick one to spotlight its projects in the row. They scroll
+   sideways when the bar is narrow, fading out at the edge. */
+.bar-langs {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 20px 2px 2px;
+  margin-right: -20px;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent);
+}
+.bar-langs::-webkit-scrollbar { display: none; }
+.lang-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(27, 23, 20, 0.08);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease), transform 0.15s ease;
+}
+.lang-chip:hover { background: #fff; border-color: rgba(27, 23, 20, 0.2); }
+.lang-chip:active { transform: scale(0.95); }
+.lang-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--white); }
+.lang-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lang-count { font-family: var(--mono); font-size: 10.5px; opacity: 0.5; }
+.lang-chip[aria-pressed="true"] .lang-count { opacity: 0.7; }
+.bar-hint {
+  display: inline-flex;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* When space is tight the chips stay and the drag hint goes: the cursor already says drag. */
+@media (max-width: 1600px) { .bar-hint { display: none; } }
+@media (max-width: 720px) {
+  .headline { flex-direction: column; align-items: flex-start; gap: 14px; padding: 16px 18px; left: calc(var(--inset) + 10px); right: calc(var(--inset) + 10px); bottom: calc(var(--inset) + 10px); }
+  .headline h1 { font-size: 32px; }
+  .bar-meta { width: 100%; gap: 14px; }
+  .bar-count { padding-right: 14px; }
+  .bar-count strong { font-size: 34px; }
+}
+
+/* ---------- Scene ---------- */
+
+.scene { position: absolute; inset: 0; perspective: var(--persp, 1000px); }
+.stage { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
+/* --card-size is the row's scale, set by the hero, so cards are drawn at the size they're shown in the row. */
+.hero .pcard {
+  --u: calc(0.6667 * var(--card-size, 1));
+  width: calc(180px * var(--card-size, 1));
+  height: calc(320px * var(--card-size, 1));
+  margin: calc(-160px * var(--card-size, 1)) 0 0 calc(-90px * var(--card-size, 1));
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 720px) {
+  .page { --inset: 6px; --radius: 16px; }
+  /* Tight enough that the name and all three links fit a 360px phone. */
+  .header { padding: 16px 12px; gap: 8px; }
+  .wordmark { font-size: 20px; }
+  .nav { gap: 0; }
+  .nav-link { padding: 7px 5px; font-size: 12.5px; }
+  .loader-brand { font-size: 40px; left: 20px; top: 24px; }
+  .loader-progress { right: 18px; bottom: 18px; }
+  .loader-skip { left: 18px; bottom: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame, .nav, .headline, .headline > *, .bar-about, .wordmark-roll, .pcard-front::before { transition: none; }
+  .bar-count strong { animation: none; }
+}
+
+/* Links open from script (no href), so give them the hand cursor back. */
+a[role="link"] {
+  cursor: pointer;
+}
